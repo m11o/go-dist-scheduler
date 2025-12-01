@@ -42,8 +42,8 @@ func (r *InMemoryJobRepository) Dequeue(ctx context.Context) (*domain.Job, error
 func (r *InMemoryJobRepository) UpdateStatus(ctx context.Context, job *domain.Job) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	// To ensure the update is atomic and reflects the entire state of the passed job,
-	// we replace the object in the map instead of just updating fields.
+	// 更新がアトミックであり、渡されたジョブの完全な状態を反映することを保証するため、
+	// フィールドを個別に更新するのではなく、マップ内のオブジェクトを置き換えます。
 	if _, ok := r.jobs[job.ID]; ok {
 		r.jobs[job.ID] = copyJob(job)
 	}
