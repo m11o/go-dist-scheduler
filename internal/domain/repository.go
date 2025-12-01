@@ -12,4 +12,5 @@ type JobRepository interface {
 	Enqueue(ctx context.Context, job *Job) error
 	Dequeue(ctx context.Context) (*Job, error)
 	UpdateStatus(ctx context.Context, job *Job) error
+	FindByID(ctx context.Context, id string) (*Job, error)
 }
