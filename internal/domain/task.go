@@ -30,9 +30,10 @@ type Task struct {
 	UpdatedAt      time.Time
 }
 
+var cronParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+
 func (t *Task) NextRunTime(now time.Time) (time.Time, error) {
-	specParser := cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
-	schedule, err := specParser.Parse(t.CronExpression)
+	schedule, err := cronParser.Parse(t.CronExpression)
 	if err != nil {
 		return time.Time{}, err
 	}
