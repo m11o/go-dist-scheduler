@@ -35,8 +35,12 @@ type Task struct {
 // このパーサーはパッケージレベルで一度だけ生成され、複数のgoroutineから安全に利用できます。
 var CronParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 
+func (t *Task) getSchedule() (cron.Schedule, error) {
+	return CronParser.Parse(t.CronExpression)
+}
+
 func (t *Task) NextRunTime(now time.Time) (time.Time, error) {
-	schedule, err := CronParser.Parse(t.CronExpression)
+	schedule, err := t.getSchedule()
 	if err != nil {
 		return time.Time{}, err
 	}
@@ -45,7 +49,7 @@ func (t *Task) NextRunTime(now time.Time) (time.Time, error) {
 
 // GetDueRunTimes は、指定された時間範囲内にスケジュールされている実行時刻をすべて返します。
 func (t *Task) GetDueRunTimes(from, to time.Time) ([]time.Time, error) {
-	schedule, err := CronParser.Parse(t.CronExpression)
+	schedule, err := t.getSchedule()
 	if err != nil {
 		return nil, err
 	}
