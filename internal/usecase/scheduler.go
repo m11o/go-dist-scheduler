@@ -32,26 +32,22 @@ func (s *Scheduler) CheckAndEnqueue(ctx context.Context, now time.Time) error {
 	}
 
 	for _, task := range tasks {
-		// cron式をパース
-		schedule, err := domain.CronParser.Parse(task.CronExpression)
-		if err != nil {
-			log.Printf("failed to parse cron expression for task %s: %v", task.ID, err)
-			continue
-		}
-
-		// 前回チェックした時刻を取得。なければタスクの作成時刻を使用
 		lastChecked := task.LastCheckedAt
 		if lastChecked.IsZero() {
 			lastChecked = task.CreatedAt
 		}
 
-		// 前回チェック時から現在時刻までの間に実行されるべきだった時刻をすべて取得
-		nextRunTime := schedule.Next(lastChecked)
-		for !nextRunTime.IsZero() && !nextRunTime.After(now) {
+		dueRunTimes, err := task.GetDueRunTimes(lastChecked, now)
+		if err != nil {
+			log.Printf("failed to get due run times for task %s: %v", task.ID, err)
+			continue
+		}
+
+		for _, runTime := range dueRunTimes {
 			newJob := &domain.Job{
 				ID:          uuid.New().String(),
 				TaskID:      task.ID,
-				ScheduledAt: nextRunTime,
+				ScheduledAt: runTime,
 				Status:      domain.JobStatusPending,
 				CreatedAt:   now,
 				UpdatedAt:   now,
@@ -59,15 +55,10 @@ func (s *Scheduler) CheckAndEnqueue(ctx context.Context, now time.Time) error {
 
 			if err := s.jobRepo.Enqueue(ctx, newJob); err != nil {
 				log.Printf("failed to enqueue job for task %s: %v", task.ID, err)
-				// 1件でもエンキューに失敗したら、このタスクの処理は中断
-				// lastChecked を更新しないことで、次回再実行されるようにする
 				goto nextTask
 			}
-			// 次の実行時刻を計算
-			nextRunTime = schedule.Next(nextRunTime)
 		}
 
-		// 最終チェック時刻を更新
 		task.LastCheckedAt = now
 		if err := s.taskRepo.Save(ctx, task); err != nil {
 			log.Printf("failed to update last checked time for task %s: %v", task.ID, err)

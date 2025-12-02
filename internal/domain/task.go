@@ -42,3 +42,20 @@ func (t *Task) NextRunTime(now time.Time) (time.Time, error) {
 	}
 	return schedule.Next(now), nil
 }
+
+// GetDueRunTimes は、指定された時間範囲内にスケジュールされている実行時刻をすべて返します。
+func (t *Task) GetDueRunTimes(from, to time.Time) ([]time.Time, error) {
+	schedule, err := CronParser.Parse(t.CronExpression)
+	if err != nil {
+		return nil, err
+	}
+
+	var dueRunTimes []time.Time
+	nextRunTime := schedule.Next(from)
+	for !nextRunTime.IsZero() && !nextRunTime.After(to) {
+		dueRunTimes = append(dueRunTimes, nextRunTime)
+		nextRunTime = schedule.Next(nextRunTime)
+	}
+
+	return dueRunTimes, nil
+}
