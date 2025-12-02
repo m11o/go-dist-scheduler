@@ -21,6 +21,12 @@ func NewInMemoryTaskRepository() *InMemoryTaskRepository {
 func (r *InMemoryTaskRepository) Save(ctx context.Context, task *domain.Task) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	existing, ok := r.tasks[task.ID]
+	if ok && existing.Version != task.Version-1 {
+		return domain.ErrConflict
+	}
+
 	r.tasks[task.ID] = copyTask(task)
 	return nil
 }
