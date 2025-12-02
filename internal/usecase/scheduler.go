@@ -39,7 +39,7 @@ func (s *Scheduler) CheckAndEnqueue(ctx context.Context, now time.Time) error {
 			continue
 		}
 
-		// 前回チェックした時刻を取得。なければタスクの作成時刻を仕様
+		// 前回チェックした時刻を取得。なければタスクの作成時刻を使用
 		lastChecked := task.LastCheckedAt
 		if lastChecked.IsZero() {
 			lastChecked = task.CreatedAt
