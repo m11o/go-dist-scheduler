@@ -29,6 +29,7 @@ type Task struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	LastCheckedAt  time.Time
+	Version        int
 }
 
 // cronParser は、標準的な5フィールド（分・時・日・月・曜日）のCron式を解析するパーサーです。
