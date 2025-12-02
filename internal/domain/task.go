@@ -31,12 +31,12 @@ type Task struct {
 	LastCheckedAt  time.Time
 }
 
-// CronParser は、標準的な5フィールド（分・時・日・月・曜日）のCron式を解析するパーサーです。
+// cronParser は、標準的な5フィールド（分・時・日・月・曜日）のCron式を解析するパーサーです。
 // このパーサーはパッケージレベルで一度だけ生成され、複数のgoroutineから安全に利用できます。
-var CronParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
+var cronParser = cron.NewParser(cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow)
 
 func (t *Task) getSchedule() (cron.Schedule, error) {
-	return CronParser.Parse(t.CronExpression)
+	return cronParser.Parse(t.CronExpression)
 }
 
 func (t *Task) NextRunTime(now time.Time) (time.Time, error) {
