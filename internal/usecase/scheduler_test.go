@@ -12,17 +12,14 @@ import (
 
 // mockTaskRepository は TaskRepository のモック実装です。
 type mockTaskRepository struct {
-	mu    sync.Mutex
-	tasks map[string]*domain.Task
-	err   error
+	mu               sync.Mutex
+	tasks            map[string]*domain.Task
+	findAllActiveErr error
 }
 
 func (m *mockTaskRepository) Save(ctx context.Context, task *domain.Task) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.err != nil {
-		return m.err
-	}
 
 	existing, ok := m.tasks[task.ID]
 	if ok && existing.Version != task.Version-1 {
@@ -41,8 +38,8 @@ func (m *mockTaskRepository) FindByID(ctx context.Context, id string) (*domain.T
 func (m *mockTaskRepository) FindAllActive(ctx context.Context) ([]*domain.Task, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.err != nil {
-		return nil, m.err
+	if m.findAllActiveErr != nil {
+		return nil, m.findAllActiveErr
 	}
 	var activeTasks []*domain.Task
 	for _, task := range m.tasks {
@@ -55,16 +52,16 @@ func (m *mockTaskRepository) FindAllActive(ctx context.Context) ([]*domain.Task,
 
 // mockJobRepository は JobRepository のモック実装です。
 type mockJobRepository struct {
-	mu       sync.Mutex
-	enqueued []*domain.Job
-	err      error
+	mu         sync.Mutex
+	enqueued   []*domain.Job
+	enqueueErr error
 }
 
 func (m *mockJobRepository) Enqueue(ctx context.Context, job *domain.Job) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	if m.err != nil {
-		return m.err
+	if m.enqueueErr != nil {
+		return m.enqueueErr
 	}
 	m.enqueued = append(m.enqueued, job)
 	return nil
@@ -164,6 +161,27 @@ func TestScheduler_CheckAndEnqueue(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("should return error when FindAllActive fails", func(t *testing.T) {
+		taskRepo := &mockTaskRepository{findAllActiveErr: assert.AnError}
+		jobRepo := &mockJobRepository{}
+		scheduler := NewScheduler(taskRepo, jobRepo)
+
+		err := scheduler.CheckAndEnqueue(context.Background(), now)
+		assert.Error(t, err)
+	})
+
+	t.Run("should not return error when Enqueue fails", func(t *testing.T) {
+		tasks := map[string]*domain.Task{
+			"task1": {ID: "task1", CronExpression: "* * * * *", Status: domain.TaskStatusActive, CreatedAt: now.Add(-2 * time.Minute)},
+		}
+		taskRepo := &mockTaskRepository{tasks: tasks}
+		jobRepo := &mockJobRepository{enqueueErr: assert.AnError}
+		scheduler := NewScheduler(taskRepo, jobRepo)
+
+		err := scheduler.CheckAndEnqueue(context.Background(), now)
+		assert.NoError(t, err)
+	})
 }
 
 func TestScheduler_CheckAndEnqueue_Conflict(t *testing.T) {
