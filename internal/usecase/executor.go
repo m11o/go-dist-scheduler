@@ -1,0 +1,44 @@
+package usecase
+
+import (
+	"context"
+	"log"
+	"time"
+
+	"github.com/yourname/go-dist-scheduler/internal/domain"
+)
+
+type Executor struct {
+	jobRepo domain.JobRepository
+}
+
+func NewExecutor(jobRepo domain.JobRepository) *Executor {
+	return &Executor{jobRepo: jobRepo}
+}
+
+func (e *Executor) RunPendingJobs(ctx context.Context) error {
+	job, err := e.jobRepo.Dequeue(ctx)
+	if err != nil {
+		return err
+	}
+	if job == nil {
+		return nil
+	}
+
+	job.Status = domain.JobStatusRunning
+	job.StartedAt = time.Now()
+	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
+		return err
+	}
+
+	log.Printf("Executing Job ID: %s", job.ID)
+	time.Sleep(10 * time.Millisecond) // Simulate work
+
+	job.Status = domain.JobStatusSuccess
+	job.FinishedAt = time.Now()
+	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
+		return err
+	}
+
+	return nil
+}
