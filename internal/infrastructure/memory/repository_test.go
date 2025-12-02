@@ -24,7 +24,7 @@ func TestInMemoryTaskRepository_Copy(t *testing.T) {
 		Status: domain.TaskStatusActive,
 	}
 
-	repo.Save(ctx, task)
+	_ = repo.Save(ctx, task)
 
 	// Modify original task after saving
 	task.Name = "Modified Task"
@@ -53,7 +53,7 @@ func TestInMemoryJobRepository_Copy(t *testing.T) {
 
 	job := &domain.Job{ID: "1", TaskID: "task1", Status: domain.JobStatusPending}
 
-	repo.Enqueue(ctx, job)
+	_ = repo.Enqueue(ctx, job)
 	job.Status = domain.JobStatusRunning // Modify original after enqueue
 
 	dequeuedJob, _ := repo.Dequeue(ctx)
@@ -79,7 +79,7 @@ func TestInMemoryTaskRepository(t *testing.T) {
 
 	// Test FindAllActive
 	task2 := &domain.Task{ID: "2", Name: "Test Task 2", Status: domain.TaskStatusPaused}
-	repo.Save(ctx, task2)
+	_ = repo.Save(ctx, task2)
 
 	activeTasks, err := repo.FindAllActive(ctx)
 	assert.NoError(t, err)
@@ -107,7 +107,7 @@ func TestInMemoryJobRepository(t *testing.T) {
 
 	// Test UpdateStatus
 	job2 := &domain.Job{ID: "2", TaskID: "task2", Status: domain.JobStatusPending}
-	repo.Enqueue(ctx, job2)
+	_ = repo.Enqueue(ctx, job2)
 
 	dequeuedJob2, err := repo.Dequeue(ctx)
 	assert.NoError(t, err)
