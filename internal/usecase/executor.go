@@ -29,6 +29,7 @@ func (e *Executor) RunPendingJobs(ctx context.Context) error {
 
 	job.Status = domain.JobStatusRunning
 	job.StartedAt = time.Now()
+	job.UpdatedAt = time.Now()
 	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
 		return err
 	}
@@ -38,6 +39,7 @@ func (e *Executor) RunPendingJobs(ctx context.Context) error {
 
 	job.Status = domain.JobStatusSuccess
 	job.FinishedAt = time.Now()
+	job.UpdatedAt = time.Now()
 	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
 		return err
 	}
