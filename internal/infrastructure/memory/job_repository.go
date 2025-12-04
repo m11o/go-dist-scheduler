@@ -8,9 +8,10 @@ import (
 )
 
 type InMemoryJobRepository struct {
-	mu      sync.Mutex
-	jobs    map[string]*domain.Job
-	queue   []string
+	mu        sync.Mutex
+	jobs      map[string]*domain.Job
+	queue     []string
+	updateErr error
 }
 
 func NewInMemoryJobRepository() *InMemoryJobRepository {
@@ -18,6 +19,12 @@ func NewInMemoryJobRepository() *InMemoryJobRepository {
 		jobs:  make(map[string]*domain.Job),
 		queue: make([]string, 0),
 	}
+}
+
+func (r *InMemoryJobRepository) SetUpdateError(err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.updateErr = err
 }
 
 func (r *InMemoryJobRepository) Enqueue(ctx context.Context, job *domain.Job) error {
@@ -42,6 +49,9 @@ func (r *InMemoryJobRepository) Dequeue(ctx context.Context) (*domain.Job, error
 func (r *InMemoryJobRepository) UpdateStatus(ctx context.Context, job *domain.Job) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.updateErr != nil && job.Status == domain.JobStatusSuccess {
+		return r.updateErr
+	}
 	// 更新がアトミックであり、渡されたジョブの完全な状態を反映することを保証するため、
 	// フィールドを個別に更新するのではなく、マップ内のオブジェクトを置き換えます。
 	if _, ok := r.jobs[job.ID]; ok {
