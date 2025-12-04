@@ -8,10 +8,12 @@ import (
 	"github.com/yourname/go-dist-scheduler/internal/domain"
 )
 
+// Executor is responsible for executing pending jobs.
 type Executor struct {
 	jobRepo domain.JobRepository
 }
 
+// NewExecutor creates a new Executor.
 func NewExecutor(jobRepo domain.JobRepository) *Executor {
 	return &Executor{jobRepo: jobRepo}
 }
