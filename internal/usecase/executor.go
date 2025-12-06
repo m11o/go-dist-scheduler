@@ -18,7 +18,7 @@ func NewExecutor(jobRepo domain.JobRepository) *Executor {
 	return &Executor{jobRepo: jobRepo}
 }
 
-func (e *Executor) RunPendingJobs(ctx context.Context) error {
+func (e *Executor) RunPendingJob(ctx context.Context) error {
 	job, err := e.jobRepo.Dequeue(ctx)
 	if err != nil {
 		return err
