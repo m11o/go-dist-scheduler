@@ -27,9 +27,7 @@ func (e *Executor) RunPendingJob(ctx context.Context) error {
 		return nil
 	}
 
-	job.Status = domain.JobStatusRunning
-	job.StartedAt = time.Now()
-	job.UpdatedAt = time.Now()
+	job.MarkAsRunning()
 	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
 		return err
 	}
@@ -37,13 +35,9 @@ func (e *Executor) RunPendingJob(ctx context.Context) error {
 	log.Printf("Executing Job ID: %s", job.ID)
 	time.Sleep(10 * time.Millisecond) // Simulate work
 
-	job.Status = domain.JobStatusSuccess
-	job.FinishedAt = time.Now()
-	job.UpdatedAt = time.Now()
+	job.MarkAsSuccess()
 	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
-		job.Status = domain.JobStatusFailed
-		job.FinishedAt = time.Now()
-		job.UpdatedAt = time.Now()
+		job.MarkAsFailed()
 		if errUpdateFailed := e.jobRepo.UpdateStatus(ctx, job); errUpdateFailed != nil {
 			log.Printf("failed to update job %s to Failed status after another error: %v", job.ID, errUpdateFailed)
 		}
