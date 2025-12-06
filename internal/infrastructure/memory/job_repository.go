@@ -12,7 +12,6 @@ type InMemoryJobRepository struct {
 	jobs               map[string]*domain.Job
 	queue              []string
 	updateErrForStatus map[domain.JobStatus]error
-	dequeueErr         error
 }
 
 func NewInMemoryJobRepository() *InMemoryJobRepository {
@@ -29,12 +28,6 @@ func (r *InMemoryJobRepository) SetUpdateError(status domain.JobStatus, err erro
 	r.updateErrForStatus[status] = err
 }
 
-func (r *InMemoryJobRepository) SetDequeueError(err error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.dequeueErr = err
-}
-
 func (r *InMemoryJobRepository) Enqueue(ctx context.Context, job *domain.Job) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -46,9 +39,6 @@ func (r *InMemoryJobRepository) Enqueue(ctx context.Context, job *domain.Job) er
 func (r *InMemoryJobRepository) Dequeue(ctx context.Context) (*domain.Job, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.dequeueErr != nil {
-		return nil, r.dequeueErr
-	}
 	if len(r.queue) == 0 {
 		return nil, nil
 	}

@@ -73,13 +73,18 @@ func TestExecutor_RunPendingJob_FailureOnUpdateToSuccess(t *testing.T) {
 	assert.NotZero(t, job.FinishedAt)
 }
 
+type dequeueErrorJobRepository struct {
+	memory.InMemoryJobRepository
+}
+
+func (r *dequeueErrorJobRepository) Dequeue(ctx context.Context) (*domain.Job, error) {
+	return nil, errors.New("failed to dequeue job")
+}
+
 func TestExecutor_RunPendingJob_DequeueError(t *testing.T) {
 	ctx := context.Background()
-	jobRepo := memory.NewInMemoryJobRepository()
+	jobRepo := &dequeueErrorJobRepository{}
 	executor := NewExecutor(jobRepo)
-
-	// Inject an error to be returned on Dequeue
-	jobRepo.SetDequeueError(errors.New("failed to dequeue job"))
 
 	err := executor.RunPendingJob(ctx)
 	assert.Error(t, err)
