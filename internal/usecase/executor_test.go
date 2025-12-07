@@ -41,9 +41,23 @@ func TestExecutor_RunPendingJob_Success(t *testing.T) {
 	assert.NotZero(t, job.FinishedAt)
 }
 
-func TestExecutor_RunPendingJob_FailureOnUpdateToSuccess(t *testing.T) {
+type updateStatusErrorJobRepository struct {
+	memory.InMemoryJobRepository
+}
+
+func (r *updateStatusErrorJobRepository) UpdateStatus(ctx context.Context, job *domain.Job) error {
+	return errors.New("failed to update job")
+}
+
+func newUpdateStatusErrorJobRepository() *updateStatusErrorJobRepository {
+	return &updateStatusErrorJobRepository{
+		InMemoryJobRepository: *memory.NewInMemoryJobRepository(),
+	}
+}
+
+func TestExecutor_RunPendingJob_UpdateStatusToRunningError(t *testing.T) {
 	ctx := context.Background()
-	jobRepo := memory.NewInMemoryJobRepository()
+	jobRepo := newUpdateStatusErrorJobRepository()
 	executor := NewExecutor(jobRepo)
 
 	// Enqueue a pending job
@@ -57,8 +71,42 @@ func TestExecutor_RunPendingJob_FailureOnUpdateToSuccess(t *testing.T) {
 	err := jobRepo.Enqueue(ctx, pendingJob)
 	assert.NoError(t, err)
 
-	// Inject an error to be returned on the second UpdateStatus call
-	jobRepo.SetUpdateError(domain.JobStatusSuccess, errors.New("failed to update job"))
+	err = executor.RunPendingJob(ctx)
+	assert.Error(t, err)
+}
+
+type updateStatusToSuccessErrorJobRepository struct {
+	memory.InMemoryJobRepository
+}
+
+func (r *updateStatusToSuccessErrorJobRepository) UpdateStatus(ctx context.Context, job *domain.Job) error {
+	if job.Status == domain.JobStatusSuccess {
+		return errors.New("failed to update job")
+	}
+	return r.InMemoryJobRepository.UpdateStatus(ctx, job)
+}
+
+func newUpdateStatusToSuccessErrorJobRepository() *updateStatusToSuccessErrorJobRepository {
+	return &updateStatusToSuccessErrorJobRepository{
+		InMemoryJobRepository: *memory.NewInMemoryJobRepository(),
+	}
+}
+
+func TestExecutor_RunPendingJob_FailureOnUpdateToSuccess(t *testing.T) {
+	ctx := context.Background()
+	jobRepo := newUpdateStatusToSuccessErrorJobRepository()
+	executor := NewExecutor(jobRepo)
+
+	// Enqueue a pending job
+	jobID := uuid.NewString()
+	pendingJob := &domain.Job{
+		ID:          jobID,
+		TaskID:      uuid.NewString(),
+		ScheduledAt: time.Now(),
+		Status:      domain.JobStatusPending,
+	}
+	err := jobRepo.Enqueue(ctx, pendingJob)
+	assert.NoError(t, err)
 
 	// Run pending jobs
 	err = executor.RunPendingJob(ctx)
@@ -81,35 +129,18 @@ func (r *dequeueErrorJobRepository) Dequeue(ctx context.Context) (*domain.Job, e
 	return nil, errors.New("failed to dequeue job")
 }
 
+func newDequeueErrorJobRepository() *dequeueErrorJobRepository {
+	return &dequeueErrorJobRepository{
+		InMemoryJobRepository: *memory.NewInMemoryJobRepository(),
+	}
+}
+
 func TestExecutor_RunPendingJob_DequeueError(t *testing.T) {
 	ctx := context.Background()
-	jobRepo := &dequeueErrorJobRepository{}
+	jobRepo := newDequeueErrorJobRepository()
 	executor := NewExecutor(jobRepo)
 
 	err := executor.RunPendingJob(ctx)
-	assert.Error(t, err)
-}
-
-func TestExecutor_RunPendingJob_UpdateStatusToRunningError(t *testing.T) {
-	ctx := context.Background()
-	jobRepo := memory.NewInMemoryJobRepository()
-	executor := NewExecutor(jobRepo)
-
-	// Enqueue a pending job
-	jobID := uuid.NewString()
-	pendingJob := &domain.Job{
-		ID:          jobID,
-		TaskID:      uuid.NewString(),
-		ScheduledAt: time.Now(),
-		Status:      domain.JobStatusPending,
-	}
-	err := jobRepo.Enqueue(ctx, pendingJob)
-	assert.NoError(t, err)
-
-	// Inject an error to be returned on the first UpdateStatus call
-	jobRepo.SetUpdateError(domain.JobStatusRunning, errors.New("failed to update job"))
-
-	err = executor.RunPendingJob(ctx)
 	assert.Error(t, err)
 }
 
