@@ -8,9 +8,9 @@ import (
 )
 
 type InMemoryJobRepository struct {
-	mu      sync.Mutex
-	jobs    map[string]*domain.Job
-	queue   []string
+	mu    sync.Mutex
+	jobs  map[string]*domain.Job
+	queue []string
 }
 
 func NewInMemoryJobRepository() *InMemoryJobRepository {
