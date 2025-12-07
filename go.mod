@@ -4,7 +4,10 @@ go 1.25.5
 
 require github.com/robfig/cron/v3 v3.0.1
 
-require github.com/google/uuid v1.6.0
+require (
+	github.com/google/uuid v1.6.0
+	github.com/kelseyhightower/envconfig v1.4.0
+)
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.3.0 // indirect
@@ -88,7 +91,6 @@ require (
 	github.com/jjti/go-spancheck v0.6.4 // indirect
 	github.com/julz/importas v0.2.0 // indirect
 	github.com/karamaru-alpha/copyloopvar v1.2.1 // indirect
-	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/kisielk/errcheck v1.9.0 // indirect
 	github.com/kkHAIKE/contextcheck v1.1.6 // indirect
 	github.com/kulti/thelper v0.6.3 // indirect
