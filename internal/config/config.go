@@ -17,7 +17,7 @@ type DatabaseConfig struct {
 	Host     string `envconfig:"DB_HOST" default:"localhost"`
 	Port     int    `envconfig:"DB_PORT" default:"5432"`
 	User     string `envconfig:"DB_USER" default:"scheduler"`
-	Password string `envconfig:"DB_PASSWORD" default:"password"`
+	Password string `envconfig:"DB_PASSWORD" required:"true"`
 	Name     string `envconfig:"DB_NAME" default:"scheduler"`
 	SSLMode  string `envconfig:"DB_SSLMODE" default:"disable"`
 }

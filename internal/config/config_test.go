@@ -8,27 +8,14 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoad_WithDefaults(t *testing.T) {
-	// Clear environment variables
+func TestLoad_MissingRequiredPassword(t *testing.T) {
+	// Clear environment variables (no DB_PASSWORD set)
 	clearEnv(t)
 
-	cfg, err := Load()
-	require.NoError(t, err)
-	require.NotNil(t, cfg)
-
-	// Check database defaults
-	assert.Equal(t, "localhost", cfg.Database.Host)
-	assert.Equal(t, 5432, cfg.Database.Port)
-	assert.Equal(t, "scheduler", cfg.Database.User)
-	assert.Equal(t, "password", cfg.Database.Password)
-	assert.Equal(t, "scheduler", cfg.Database.Name)
-	assert.Equal(t, "disable", cfg.Database.SSLMode)
-
-	// Check Redis defaults
-	assert.Equal(t, "localhost", cfg.Redis.Host)
-	assert.Equal(t, 6379, cfg.Redis.Port)
-	assert.Equal(t, "", cfg.Redis.Password)
-	assert.Equal(t, 0, cfg.Redis.DB)
+	_, err := Load()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load database config")
+	assert.Contains(t, err.Error(), "DB_PASSWORD")
 }
 
 func TestLoad_WithEnvironmentVariables(t *testing.T) {
@@ -67,11 +54,12 @@ func TestLoad_WithEnvironmentVariables(t *testing.T) {
 }
 
 func TestLoad_WithPartialEnvironmentVariables(t *testing.T) {
-	// Set only some environment variables
+	// Set only some environment variables (including required DB_PASSWORD)
 	setEnv(t, map[string]string{
-		"DB_HOST": "custom.db.com",
-		"DB_PORT": "3306",
-		"REDIS_HOST": "custom.redis.com",
+		"DB_HOST":     "custom.db.com",
+		"DB_PORT":     "3306",
+		"DB_PASSWORD": "custompass",
+		"REDIS_HOST":  "custom.redis.com",
 	})
 	defer clearEnv(t)
 
@@ -82,6 +70,7 @@ func TestLoad_WithPartialEnvironmentVariables(t *testing.T) {
 	// Check overridden values
 	assert.Equal(t, "custom.db.com", cfg.Database.Host)
 	assert.Equal(t, 3306, cfg.Database.Port)
+	assert.Equal(t, "custompass", cfg.Database.Password)
 	assert.Equal(t, "custom.redis.com", cfg.Redis.Host)
 
 	// Check default values
@@ -163,7 +152,8 @@ func TestRedisConfig_Addr(t *testing.T) {
 
 func TestLoad_InvalidPortValue(t *testing.T) {
 	setEnv(t, map[string]string{
-		"DB_PORT": "invalid",
+		"DB_PORT":     "invalid",
+		"DB_PASSWORD": "testpass",
 	})
 	defer clearEnv(t)
 
@@ -174,7 +164,8 @@ func TestLoad_InvalidPortValue(t *testing.T) {
 
 func TestLoad_InvalidRedisPortValue(t *testing.T) {
 	setEnv(t, map[string]string{
-		"REDIS_PORT": "invalid",
+		"DB_PASSWORD": "testpass",
+		"REDIS_PORT":  "invalid",
 	})
 	defer clearEnv(t)
 
