@@ -172,6 +172,17 @@ func TestLoad_InvalidPortValue(t *testing.T) {
 	assert.Contains(t, err.Error(), "failed to load database config")
 }
 
+func TestLoad_InvalidRedisPortValue(t *testing.T) {
+	setEnv(t, map[string]string{
+		"REDIS_PORT": "invalid",
+	})
+	defer clearEnv(t)
+
+	_, err := Load()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to load redis config")
+}
+
 // Helper function to set environment variables for testing
 func setEnv(t *testing.T, vars map[string]string) {
 	t.Helper()
