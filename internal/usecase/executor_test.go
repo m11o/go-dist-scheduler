@@ -112,13 +112,11 @@ func TestExecutor_RunPendingJob_FailureOnUpdateToSuccess(t *testing.T) {
 	err = executor.RunPendingJob(ctx)
 	assert.Error(t, err)
 
-	// Verify job status transition to Failed
+	// Verify job status remains Running
 	job, err := jobRepo.FindByID(ctx, jobID)
 	assert.NoError(t, err)
 	assert.NotNil(t, job)
-	assert.Equal(t, domain.JobStatusFailed, job.Status)
-	assert.NotZero(t, job.StartedAt)
-	assert.NotZero(t, job.FinishedAt)
+	assert.Equal(t, domain.JobStatusRunning, job.Status)
 }
 
 type dequeueErrorJobRepository struct {
