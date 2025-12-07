@@ -43,7 +43,7 @@ The application configuration is managed through environment variables. See `.en
 The `internal/config` package provides configuration loading:
 
 ```go
-import "github.com/yourname/go-dist-scheduler/internal/config"
+import "github.com/m11o/go-dist-scheduler/internal/config"
 
 cfg, err := config.Load()
 if err != nil {
