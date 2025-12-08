@@ -23,11 +23,21 @@ func NewExecutor(jobRepo domain.JobRepository, jobQueue domain.JobQueue) *Execut
 }
 
 func (e *Executor) RunPendingJob(ctx context.Context) error {
-	job, err := e.jobQueue.Dequeue(ctx)
+	jobID, err := e.jobQueue.Dequeue(ctx)
+	if err != nil {
+		return err
+	}
+	if jobID == "" {
+		return nil
+	}
+
+	// キューから取得したIDを使ってDBからジョブを取得
+	job, err := e.jobRepo.FindByID(ctx, jobID)
 	if err != nil {
 		return err
 	}
 	if job == nil {
+		log.Printf("job not found in repository: %s", jobID)
 		return nil
 	}
 

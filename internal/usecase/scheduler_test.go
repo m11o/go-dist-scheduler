@@ -53,7 +53,7 @@ func (m *mockTaskRepository) FindAllActive(ctx context.Context) ([]*domain.Task,
 // mockJobRepository は JobRepository のモック実装です。
 type mockJobRepository struct {
 	mu      sync.Mutex
-	jobs    map[string]*domain.Job
+	jobs    map[domain.JobID]*domain.Job
 	saveErr error
 }
 
@@ -64,13 +64,13 @@ func (m *mockJobRepository) Save(ctx context.Context, job *domain.Job) error {
 		return m.saveErr
 	}
 	if m.jobs == nil {
-		m.jobs = make(map[string]*domain.Job)
+		m.jobs = make(map[domain.JobID]*domain.Job)
 	}
 	m.jobs[job.ID] = job
 	return nil
 }
 
-func (m *mockJobRepository) FindByID(ctx context.Context, id string) (*domain.Job, error) {
+func (m *mockJobRepository) FindByID(ctx context.Context, id domain.JobID) (*domain.Job, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	return m.jobs[id], nil
@@ -88,22 +88,22 @@ func (m *mockJobRepository) Update(ctx context.Context, job *domain.Job) error {
 // mockJobQueue は JobQueue のモック実装です。
 type mockJobQueue struct {
 	mu         sync.Mutex
-	enqueued   []*domain.Job
+	enqueued   []domain.JobID
 	enqueueErr error
 }
 
-func (m *mockJobQueue) Enqueue(ctx context.Context, job *domain.Job) error {
+func (m *mockJobQueue) Enqueue(ctx context.Context, jobID domain.JobID) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.enqueueErr != nil {
 		return m.enqueueErr
 	}
-	m.enqueued = append(m.enqueued, job)
+	m.enqueued = append(m.enqueued, jobID)
 	return nil
 }
 
-func (m *mockJobQueue) Dequeue(ctx context.Context) (*domain.Job, error) {
-	return nil, nil
+func (m *mockJobQueue) Dequeue(ctx context.Context) (domain.JobID, error) {
+	return "", nil
 }
 
 func TestScheduler_CheckAndEnqueue(t *testing.T) {

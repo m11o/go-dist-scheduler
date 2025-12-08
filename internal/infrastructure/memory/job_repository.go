@@ -10,12 +10,12 @@ import (
 // InMemoryJobRepository implements domain.JobRepository for in-memory job persistence.
 type InMemoryJobRepository struct {
 	mu   sync.Mutex
-	jobs map[string]*domain.Job
+	jobs map[domain.JobID]*domain.Job
 }
 
 func NewInMemoryJobRepository() *InMemoryJobRepository {
 	return &InMemoryJobRepository{
-		jobs: make(map[string]*domain.Job),
+		jobs: make(map[domain.JobID]*domain.Job),
 	}
 }
 
@@ -26,7 +26,7 @@ func (r *InMemoryJobRepository) Save(ctx context.Context, job *domain.Job) error
 	return nil
 }
 
-func (r *InMemoryJobRepository) FindByID(ctx context.Context, id string) (*domain.Job, error) {
+func (r *InMemoryJobRepository) FindByID(ctx context.Context, id domain.JobID) (*domain.Job, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if job, ok := r.jobs[id]; ok {
@@ -49,34 +49,31 @@ func (r *InMemoryJobRepository) Update(ctx context.Context, job *domain.Job) err
 // InMemoryJobQueue implements domain.JobQueue for in-memory job queueing.
 type InMemoryJobQueue struct {
 	mu    sync.Mutex
-	queue []string
-	jobs  map[string]*domain.Job
+	queue []domain.JobID
 }
 
 func NewInMemoryJobQueue() *InMemoryJobQueue {
 	return &InMemoryJobQueue{
-		queue: make([]string, 0),
-		jobs:  make(map[string]*domain.Job),
+		queue: make([]domain.JobID, 0),
 	}
 }
 
-func (q *InMemoryJobQueue) Enqueue(ctx context.Context, job *domain.Job) error {
+func (q *InMemoryJobQueue) Enqueue(ctx context.Context, jobID domain.JobID) error {
 	q.mu.Lock()
 	defer q.mu.Unlock()
-	q.jobs[job.ID] = copyJob(job)
-	q.queue = append(q.queue, job.ID)
+	q.queue = append(q.queue, jobID)
 	return nil
 }
 
-func (q *InMemoryJobQueue) Dequeue(ctx context.Context) (*domain.Job, error) {
+func (q *InMemoryJobQueue) Dequeue(ctx context.Context) (domain.JobID, error) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	if len(q.queue) == 0 {
-		return nil, nil
+		return "", nil
 	}
 	jobID := q.queue[0]
 	q.queue = q.queue[1:]
-	return copyJob(q.jobs[jobID]), nil
+	return jobID, nil
 }
 
 // copyJob creates a shallow copy of a Job object.

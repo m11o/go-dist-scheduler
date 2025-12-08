@@ -47,7 +47,7 @@ func (s *Scheduler) CheckAndEnqueue(ctx context.Context, now time.Time) error {
 
 		for _, runTime := range dueRunTimes {
 			newJob := &domain.Job{
-				ID:          uuid.New().String(),
+				ID:          domain.JobID(uuid.New().String()),
 				TaskID:      task.ID,
 				ScheduledAt: runTime,
 				Status:      domain.JobStatusPending,
@@ -62,7 +62,7 @@ func (s *Scheduler) CheckAndEnqueue(ctx context.Context, now time.Time) error {
 			}
 
 			// Redisキューにエンキュー
-			if err := s.jobQueue.Enqueue(ctx, newJob); err != nil {
+			if err := s.jobQueue.Enqueue(ctx, newJob.ID); err != nil {
 				log.Printf("failed to enqueue job for task %s: %v", task.ID, err)
 				goto nextTask
 			}

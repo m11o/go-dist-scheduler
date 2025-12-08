@@ -19,7 +19,7 @@ func TestExecutor_RunPendingJob_Success(t *testing.T) {
 	executor := NewExecutor(jobRepo, jobQueue)
 
 	// Enqueue a pending job
-	jobID := uuid.NewString()
+	jobID := domain.JobID(uuid.NewString())
 	pendingJob := &domain.Job{
 		ID:          jobID,
 		TaskID:      uuid.NewString(),
@@ -28,7 +28,7 @@ func TestExecutor_RunPendingJob_Success(t *testing.T) {
 	}
 	err := jobRepo.Save(ctx, pendingJob)
 	assert.NoError(t, err)
-	err = jobQueue.Enqueue(ctx, pendingJob)
+	err = jobQueue.Enqueue(ctx, pendingJob.ID)
 	assert.NoError(t, err)
 
 	// Run pending jobs
@@ -65,14 +65,16 @@ func TestExecutor_RunPendingJob_UpdateStatusToRunningError(t *testing.T) {
 	executor := NewExecutor(jobRepo, jobQueue)
 
 	// Enqueue a pending job
-	jobID := uuid.NewString()
+	jobID := domain.JobID(uuid.NewString())
 	pendingJob := &domain.Job{
 		ID:          jobID,
 		TaskID:      uuid.NewString(),
 		ScheduledAt: time.Now(),
 		Status:      domain.JobStatusPending,
 	}
-	err := jobQueue.Enqueue(ctx, pendingJob)
+	err := jobRepo.Save(ctx, pendingJob)
+	assert.NoError(t, err)
+	err = jobQueue.Enqueue(ctx, pendingJob.ID)
 	assert.NoError(t, err)
 
 	err = executor.RunPendingJob(ctx)
@@ -103,7 +105,7 @@ func TestExecutor_RunPendingJob_FailureOnUpdateToSuccess(t *testing.T) {
 	executor := NewExecutor(jobRepo, jobQueue)
 
 	// Enqueue a pending job
-	jobID := uuid.NewString()
+	jobID := domain.JobID(uuid.NewString())
 	pendingJob := &domain.Job{
 		ID:          jobID,
 		TaskID:      uuid.NewString(),
@@ -112,7 +114,7 @@ func TestExecutor_RunPendingJob_FailureOnUpdateToSuccess(t *testing.T) {
 	}
 	err := jobRepo.Save(ctx, pendingJob)
 	assert.NoError(t, err)
-	err = jobQueue.Enqueue(ctx, pendingJob)
+	err = jobQueue.Enqueue(ctx, pendingJob.ID)
 	assert.NoError(t, err)
 
 	// Run pending jobs
@@ -130,8 +132,8 @@ type dequeueErrorJobQueue struct {
 	memory.InMemoryJobQueue
 }
 
-func (q *dequeueErrorJobQueue) Dequeue(ctx context.Context) (*domain.Job, error) {
-	return nil, errors.New("failed to dequeue job")
+func (q *dequeueErrorJobQueue) Dequeue(ctx context.Context) (domain.JobID, error) {
+	return "", errors.New("failed to dequeue job")
 }
 
 func newDequeueErrorJobQueue() *dequeueErrorJobQueue {
