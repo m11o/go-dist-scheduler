@@ -45,11 +45,12 @@ func (r *InMemoryJobRepository) UpdateStatus(ctx context.Context, jobID string, 
 	defer r.mu.Unlock()
 	if job, ok := r.jobs[jobID]; ok {
 		job.Status = status
-		if status == domain.JobStatusRunning {
+		switch status {
+		case domain.JobStatusRunning:
 			job.MarkAsRunning()
-		} else if status == domain.JobStatusSuccess {
+		case domain.JobStatusSuccess:
 			job.MarkAsSuccess()
-		} else if status == domain.JobStatusFailed {
+		case domain.JobStatusFailed:
 			job.MarkAsFailed()
 		}
 	}
