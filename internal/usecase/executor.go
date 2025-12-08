@@ -20,6 +20,7 @@ func NewExecutor(jobRepo domain.JobRepository) *Executor {
 	}
 }
 
+// RunPendingJob は、キューから1つのジョブをデキューして実行します。
 func (e *Executor) RunPendingJob(ctx context.Context) error {
 	job, err := e.jobRepo.Dequeue(ctx)
 	if err != nil {
