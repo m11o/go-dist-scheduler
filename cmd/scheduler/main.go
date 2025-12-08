@@ -27,12 +27,12 @@ func main() {
 
 	ctx := context.Background()
 
-	// サンプルタスクの登録（10秒ごとに実行）
+	// サンプルタスクの登録（1分ごとに実行）
 	// 注: このタスクはデモンストレーション用です。実際のHTTPリクエストは送信されません。
 	sampleTask := &domain.Task{
 		ID:             uuid.New().String(),
 		Name:           "Sample Task",
-		CronExpression: "*/10 * * * * *", // 10秒ごと（秒・分・時・日・月・曜日の6フィールド形式）
+		CronExpression: "* * * * *", // 1分ごと（分・時・日・月・曜日の5フィールド形式）
 		Payload: domain.HTTPRequestInfo{
 			URL:    "http://example.com/webhook",
 			Method: "POST",
