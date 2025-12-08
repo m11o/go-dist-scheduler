@@ -245,3 +245,40 @@ func TestScheduler_CheckAndEnqueue_Conflict(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 2, finalTask.Version)
 }
+
+func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T) {
+	jst := time.FixedZone("JST", 9*60*60)
+	now := time.Date(2023, 10, 28, 10, 0, 0, 0, jst)
+	originalLastChecked := now.Add(-5 * time.Minute)
+
+	// Create a task with a specific LastCheckedAt time
+	task := &domain.Task{
+		ID:             "task1",
+		CronExpression: "* * * * *",
+		Status:         domain.TaskStatusActive,
+		CreatedAt:      now.Add(-10 * time.Minute),
+		LastCheckedAt:  originalLastChecked,
+		Version:        1,
+	}
+	tasks := map[string]*domain.Task{"task1": task}
+
+	taskRepo := &mockTaskRepository{tasks: tasks}
+	// Configure jobRepo to fail on Save
+	jobRepo := &mockJobRepository{saveErr: assert.AnError}
+	jobQueue := &mockJobQueue{}
+	scheduler := NewScheduler(taskRepo, jobRepo, jobQueue)
+
+	// Run CheckAndEnqueue - Save will fail, so LastCheckedAt should not be updated
+	err := scheduler.CheckAndEnqueue(context.Background(), now)
+	assert.NoError(t, err) // The error is logged but not returned
+
+	// Verify that LastCheckedAt remains unchanged
+	finalTask, err := taskRepo.FindByID(context.Background(), "task1")
+	assert.NoError(t, err)
+	assert.NotNil(t, finalTask)
+	assert.Equal(t, originalLastChecked, finalTask.LastCheckedAt, "LastCheckedAt should remain unchanged when Save fails")
+	assert.Equal(t, 1, finalTask.Version, "Version should remain unchanged when Save fails")
+
+	// Verify that no jobs were enqueued
+	assert.Len(t, jobQueue.enqueued, 0, "No jobs should be enqueued when Save fails")
+}
