@@ -24,10 +24,8 @@ type DatabaseConfig struct {
 
 // RedisConfig represents Redis connection configuration.
 type RedisConfig struct {
-	Host     string `envconfig:"REDIS_HOST" default:"localhost"`
-	Port     int    `envconfig:"REDIS_PORT" default:"6379"`
-	Password string `envconfig:"REDIS_PASSWORD" default:""`
-	DB       int    `envconfig:"REDIS_DB" default:"0"`
+	Host string `envconfig:"REDIS_HOST" default:"localhost"`
+	Port int    `envconfig:"REDIS_PORT" default:"6379"`
 }
 
 // Load reads configuration from environment variables.

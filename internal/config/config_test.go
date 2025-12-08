@@ -21,16 +21,14 @@ func TestLoad_MissingRequiredPassword(t *testing.T) {
 func TestLoad_WithEnvironmentVariables(t *testing.T) {
 	// Set environment variables
 	setEnv(t, map[string]string{
-		"DB_HOST":       "db.example.com",
-		"DB_PORT":       "5433",
-		"DB_USER":       "testuser",
-		"DB_PASSWORD":   "testpass",
-		"DB_NAME":       "testdb",
-		"DB_SSLMODE":    "require",
-		"REDIS_HOST":    "redis.example.com",
-		"REDIS_PORT":    "6380",
-		"REDIS_PASSWORD": "redispass",
-		"REDIS_DB":      "1",
+		"DB_HOST":     "db.example.com",
+		"DB_PORT":     "5433",
+		"DB_USER":     "testuser",
+		"DB_PASSWORD": "testpass",
+		"DB_NAME":     "testdb",
+		"DB_SSLMODE":  "require",
+		"REDIS_HOST":  "redis.example.com",
+		"REDIS_PORT":  "6380",
 	})
 	defer clearEnv(t)
 
@@ -49,8 +47,6 @@ func TestLoad_WithEnvironmentVariables(t *testing.T) {
 	// Check Redis config
 	assert.Equal(t, "redis.example.com", cfg.Redis.Host)
 	assert.Equal(t, 6380, cfg.Redis.Port)
-	assert.Equal(t, "redispass", cfg.Redis.Password)
-	assert.Equal(t, 1, cfg.Redis.DB)
 }
 
 func TestLoad_WithPartialEnvironmentVariables(t *testing.T) {
@@ -188,7 +184,7 @@ func clearEnv(t *testing.T) {
 	t.Helper()
 	envVars := []string{
 		"DB_HOST", "DB_PORT", "DB_USER", "DB_PASSWORD", "DB_NAME", "DB_SSLMODE",
-		"REDIS_HOST", "REDIS_PORT", "REDIS_PASSWORD", "REDIS_DB",
+		"REDIS_HOST", "REDIS_PORT",
 	}
 	for _, key := range envVars {
 		err := os.Unsetenv(key)
