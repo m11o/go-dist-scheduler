@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/google/uuid"
@@ -52,19 +55,30 @@ func main() {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
+	// シグナルハンドリングによるグレースフルシャットダウン
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
 	log.Println("Scheduler loop started. Checking every 1 second...")
+	log.Println("Press Ctrl+C to stop")
 
-	for range ticker.C {
-		now := time.Now()
+	for {
+		select {
+		case <-ticker.C:
+			now := time.Now()
 
-		// スケジューラー: タスクをチェックしてジョブをエンキュー
-		if err := scheduler.CheckAndEnqueue(ctx, now); err != nil {
-			log.Printf("Error in CheckAndEnqueue: %v", err)
-		}
+			// スケジューラー: タスクをチェックしてジョブをエンキュー
+			if err := scheduler.CheckAndEnqueue(ctx, now); err != nil {
+				log.Printf("Error in CheckAndEnqueue: %v", err)
+			}
 
-		// エグゼキューター: ペンディング中のジョブを実行
-		if err := executor.RunPendingJob(ctx); err != nil {
-			log.Printf("Error in RunPendingJob: %v", err)
+			// エグゼキューター: ペンディング中のジョブを実行
+			if err := executor.RunPendingJob(ctx); err != nil {
+				log.Printf("Error in RunPendingJob: %v", err)
+			}
+		case sig := <-sigCh:
+			log.Printf("Received signal: %v. Shutting down gracefully...", sig)
+			return
 		}
 	}
 }
