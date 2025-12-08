@@ -4,7 +4,7 @@ services:
     container_name: go-dist-scheduler-postgres
     environment:
       POSTGRES_USER: ${DB_USER:-scheduler}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME:-scheduler}
     ports:
       - "${DB_PORT:-5432}:5432"
