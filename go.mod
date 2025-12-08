@@ -4,7 +4,10 @@ go 1.25.5
 
 require github.com/robfig/cron/v3 v3.0.1
 
-require github.com/google/uuid v1.6.0
+require (
+	github.com/google/uuid v1.6.0
+	github.com/kelseyhightower/envconfig v1.4.0
+)
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.3.0 // indirect
