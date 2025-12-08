@@ -13,15 +13,13 @@ import (
 type Scheduler struct {
 	taskRepo domain.TaskRepository
 	jobRepo  domain.JobRepository
-	jobQueue domain.JobQueue
 }
 
 // NewScheduler は新しいSchedulerインスタンスを生成します。
-func NewScheduler(taskRepo domain.TaskRepository, jobRepo domain.JobRepository, jobQueue domain.JobQueue) *Scheduler {
+func NewScheduler(taskRepo domain.TaskRepository, jobRepo domain.JobRepository) *Scheduler {
 	return &Scheduler{
 		taskRepo: taskRepo,
 		jobRepo:  jobRepo,
-		jobQueue: jobQueue,
 	}
 }
 
@@ -47,7 +45,7 @@ func (s *Scheduler) CheckAndEnqueue(ctx context.Context, now time.Time) error {
 
 		for _, runTime := range dueRunTimes {
 			newJob := &domain.Job{
-				ID:          domain.JobID(uuid.New().String()),
+				ID:          uuid.New().String(),
 				TaskID:      task.ID,
 				ScheduledAt: runTime,
 				Status:      domain.JobStatusPending,
@@ -55,14 +53,7 @@ func (s *Scheduler) CheckAndEnqueue(ctx context.Context, now time.Time) error {
 				UpdatedAt:   now,
 			}
 
-			// DBに永続化
-			if err := s.jobRepo.Save(ctx, newJob); err != nil {
-				log.Printf("failed to save job for task %s: %v", task.ID, err)
-				goto nextTask
-			}
-
-			// Redisキューにエンキュー
-			if err := s.jobQueue.Enqueue(ctx, newJob.ID); err != nil {
+			if err := s.jobRepo.Enqueue(ctx, newJob); err != nil {
 				log.Printf("failed to enqueue job for task %s: %v", task.ID, err)
 				goto nextTask
 			}

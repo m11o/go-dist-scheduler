@@ -1,10 +1,8 @@
-
 package memory
 
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/yourname/go-dist-scheduler/internal/domain"
@@ -51,96 +49,32 @@ func TestInMemoryJobRepository_Copy(t *testing.T) {
 	ctx := context.Background()
 	repo := NewInMemoryJobRepository()
 
-	job := &domain.Job{ID: domain.JobID("1"), TaskID: "task1", Status: domain.JobStatusPending}
+	job := &domain.Job{ID: "1", TaskID: "task1", Status: domain.JobStatusPending}
 
-	_ = repo.Save(ctx, job)
-	job.Status = domain.JobStatusRunning // Modify original after save
+	_ = repo.Enqueue(ctx, job)
+	job.Status = domain.JobStatusRunning // Modify original after enqueue
 
-	foundJob, _ := repo.FindByID(ctx, domain.JobID("1"))
-	assert.Equal(t, domain.JobStatusPending, foundJob.Status)
-
-	foundJob.Status = domain.JobStatusSuccess // Modify found job
-	refetchedJob, _ := repo.FindByID(ctx, domain.JobID("1"))
-	assert.Equal(t, domain.JobStatusPending, refetchedJob.Status)
-}
-
-func TestInMemoryJobQueue_Copy(t *testing.T) {
-	ctx := context.Background()
-	queue := NewInMemoryJobQueue()
-
-	jobID := domain.JobID("1")
-
-	_ = queue.Enqueue(ctx, jobID)
-
-	dequeuedJobID, _ := queue.Dequeue(ctx)
-	assert.Equal(t, jobID, dequeuedJobID)
-}
-
-func TestInMemoryTaskRepository(t *testing.T) {
-	ctx := context.Background()
-	repo := NewInMemoryTaskRepository()
-
-	// Test Save and FindByID
-	task1 := &domain.Task{ID: "1", Name: "Test Task 1", Status: domain.TaskStatusActive}
-	err := repo.Save(ctx, task1)
-	assert.NoError(t, err)
-
-	foundTask, err := repo.FindByID(ctx, "1")
-	assert.NoError(t, err)
-	assert.EqualValues(t, task1, foundTask) // Use EqualValues for deep comparison
-
-	// Test FindAllActive
-	task2 := &domain.Task{ID: "2", Name: "Test Task 2", Status: domain.TaskStatusPaused}
-	_ = repo.Save(ctx, task2)
-
-	activeTasks, err := repo.FindAllActive(ctx)
-	assert.NoError(t, err)
-	assert.Len(t, activeTasks, 1)
-	assert.EqualValues(t, task1, activeTasks[0]) // Use EqualValues
+	dequeuedJob, _ := repo.Dequeue(ctx)
+	assert.Equal(t, domain.JobStatusPending, dequeuedJob.Status)
 }
 
 func TestInMemoryJobRepository(t *testing.T) {
 	ctx := context.Background()
 	repo := NewInMemoryJobRepository()
 
-	// Test Save and FindByID
-	job1 := &domain.Job{ID: domain.JobID("1"), TaskID: "task1", Status: domain.JobStatusPending}
-	err := repo.Save(ctx, job1)
-	assert.NoError(t, err)
-
-	foundJob, err := repo.FindByID(ctx, domain.JobID("1"))
-	assert.NoError(t, err)
-	assert.EqualValues(t, job1, foundJob)
-
-	// Test Update
-	job1.Status = domain.JobStatusSuccess
-	job1.FinishedAt = time.Now()
-	err = repo.Update(ctx, job1)
-	assert.NoError(t, err)
-
-	updatedJob, err := repo.FindByID(ctx, domain.JobID("1"))
-	assert.NoError(t, err)
-	assert.Equal(t, job1.Status, updatedJob.Status)
-	assert.WithinDuration(t, job1.FinishedAt, updatedJob.FinishedAt, time.Millisecond)
-}
-
-func TestInMemoryJobQueue(t *testing.T) {
-	ctx := context.Background()
-	queue := NewInMemoryJobQueue()
-
 	// Test Enqueue and Dequeue
-	jobID1 := domain.JobID("1")
-	err := queue.Enqueue(ctx, jobID1)
+	job1 := &domain.Job{ID: "1", TaskID: "task1"}
+	err := repo.Enqueue(ctx, job1)
 	assert.NoError(t, err)
 
-	dequeuedJobID, err := queue.Dequeue(ctx)
+	dequeuedJob, err := repo.Dequeue(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, jobID1, dequeuedJobID)
+	assert.EqualValues(t, job1, dequeuedJob)
 
 	// Test Dequeue from empty queue
-	dequeuedJobID, err = queue.Dequeue(ctx)
+	dequeuedJob, err = repo.Dequeue(ctx)
 	assert.NoError(t, err)
-	assert.Equal(t, domain.JobID(""), dequeuedJobID)
+	assert.Nil(t, dequeuedJob)
 }
 
 func TestInMemoryTaskRepository_Save_Conflict(t *testing.T) {

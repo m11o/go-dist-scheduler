@@ -7,73 +7,37 @@ import (
 	"github.com/yourname/go-dist-scheduler/internal/domain"
 )
 
-// InMemoryJobRepository implements domain.JobRepository for in-memory job persistence.
+// InMemoryJobRepository implements domain.JobRepository for in-memory job queueing.
 type InMemoryJobRepository struct {
-	mu   sync.Mutex
-	jobs map[domain.JobID]*domain.Job
+	mu    sync.Mutex
+	queue []string
+	jobs  map[string]*domain.Job
 }
 
 func NewInMemoryJobRepository() *InMemoryJobRepository {
 	return &InMemoryJobRepository{
-		jobs: make(map[domain.JobID]*domain.Job),
+		queue: make([]string, 0),
+		jobs:  make(map[string]*domain.Job),
 	}
 }
 
-func (r *InMemoryJobRepository) Save(ctx context.Context, job *domain.Job) error {
+func (r *InMemoryJobRepository) Enqueue(ctx context.Context, job *domain.Job) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.jobs[job.ID] = copyJob(job)
+	r.queue = append(r.queue, job.ID)
 	return nil
 }
 
-func (r *InMemoryJobRepository) FindByID(ctx context.Context, id domain.JobID) (*domain.Job, error) {
+func (r *InMemoryJobRepository) Dequeue(ctx context.Context) (*domain.Job, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if job, ok := r.jobs[id]; ok {
-		return copyJob(job), nil
+	if len(r.queue) == 0 {
+		return nil, nil
 	}
-	return nil, nil
-}
-
-func (r *InMemoryJobRepository) Update(ctx context.Context, job *domain.Job) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	// 更新がアトミックであり、渡されたジョブの完全な状態を反映することを保証するため、
-	// フィールドを個別に更新するのではなく、マップ内のオブジェクトを置き換えます。
-	if _, ok := r.jobs[job.ID]; ok {
-		r.jobs[job.ID] = copyJob(job)
-	}
-	return nil
-}
-
-// InMemoryJobQueue implements domain.JobQueue for in-memory job queueing.
-type InMemoryJobQueue struct {
-	mu    sync.Mutex
-	queue []domain.JobID
-}
-
-func NewInMemoryJobQueue() *InMemoryJobQueue {
-	return &InMemoryJobQueue{
-		queue: make([]domain.JobID, 0),
-	}
-}
-
-func (q *InMemoryJobQueue) Enqueue(ctx context.Context, jobID domain.JobID) error {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-	q.queue = append(q.queue, jobID)
-	return nil
-}
-
-func (q *InMemoryJobQueue) Dequeue(ctx context.Context) (domain.JobID, error) {
-	q.mu.Lock()
-	defer q.mu.Unlock()
-	if len(q.queue) == 0 {
-		return "", nil
-	}
-	jobID := q.queue[0]
-	q.queue = q.queue[1:]
-	return jobID, nil
+	jobID := r.queue[0]
+	r.queue = r.queue[1:]
+	return copyJob(r.jobs[jobID]), nil
 }
 
 // copyJob creates a shallow copy of a Job object.

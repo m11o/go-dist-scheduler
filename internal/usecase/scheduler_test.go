@@ -52,58 +52,23 @@ func (m *mockTaskRepository) FindAllActive(ctx context.Context) ([]*domain.Task,
 
 // mockJobRepository は JobRepository のモック実装です。
 type mockJobRepository struct {
-	mu      sync.Mutex
-	jobs    map[domain.JobID]*domain.Job
-	saveErr error
-}
-
-func (m *mockJobRepository) Save(ctx context.Context, job *domain.Job) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.saveErr != nil {
-		return m.saveErr
-	}
-	if m.jobs == nil {
-		m.jobs = make(map[domain.JobID]*domain.Job)
-	}
-	m.jobs[job.ID] = job
-	return nil
-}
-
-func (m *mockJobRepository) FindByID(ctx context.Context, id domain.JobID) (*domain.Job, error) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	return m.jobs[id], nil
-}
-
-func (m *mockJobRepository) Update(ctx context.Context, job *domain.Job) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if _, ok := m.jobs[job.ID]; ok {
-		m.jobs[job.ID] = job
-	}
-	return nil
-}
-
-// mockJobQueue は JobQueue のモック実装です。
-type mockJobQueue struct {
 	mu         sync.Mutex
-	enqueued   []domain.JobID
+	enqueued   []*domain.Job
 	enqueueErr error
 }
 
-func (m *mockJobQueue) Enqueue(ctx context.Context, jobID domain.JobID) error {
+func (m *mockJobRepository) Enqueue(ctx context.Context, job *domain.Job) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if m.enqueueErr != nil {
 		return m.enqueueErr
 	}
-	m.enqueued = append(m.enqueued, jobID)
+	m.enqueued = append(m.enqueued, job)
 	return nil
 }
 
-func (m *mockJobQueue) Dequeue(ctx context.Context) (domain.JobID, error) {
-	return "", nil
+func (m *mockJobRepository) Dequeue(ctx context.Context) (*domain.Job, error) {
+	return nil, nil
 }
 
 func TestScheduler_CheckAndEnqueue(t *testing.T) {
@@ -174,12 +139,11 @@ func TestScheduler_CheckAndEnqueue(t *testing.T) {
 			}
 			taskRepo := &mockTaskRepository{tasks: tasksCopy}
 			jobRepo := &mockJobRepository{}
-			jobQueue := &mockJobQueue{}
-			scheduler := NewScheduler(taskRepo, jobRepo, jobQueue)
+			scheduler := NewScheduler(taskRepo, jobRepo)
 
 			err := scheduler.CheckAndEnqueue(context.Background(), tc.now)
 			assert.NoError(t, err)
-			assert.Len(t, jobQueue.enqueued, tc.expectedJobs)
+			assert.Len(t, jobRepo.enqueued, tc.expectedJobs)
 
 			for taskID, expectedTime := range tc.expectedLastChecked {
 				task, err := taskRepo.FindByID(context.Background(), taskID)
@@ -193,8 +157,7 @@ func TestScheduler_CheckAndEnqueue(t *testing.T) {
 	t.Run("should return error when FindAllActive fails", func(t *testing.T) {
 		taskRepo := &mockTaskRepository{findAllActiveErr: assert.AnError}
 		jobRepo := &mockJobRepository{}
-		jobQueue := &mockJobQueue{}
-		scheduler := NewScheduler(taskRepo, jobRepo, jobQueue)
+		scheduler := NewScheduler(taskRepo, jobRepo)
 
 		err := scheduler.CheckAndEnqueue(context.Background(), now)
 		assert.Error(t, err)
@@ -205,9 +168,8 @@ func TestScheduler_CheckAndEnqueue(t *testing.T) {
 			"task1": {ID: "task1", CronExpression: "* * * * *", Status: domain.TaskStatusActive, CreatedAt: now.Add(-2 * time.Minute)},
 		}
 		taskRepo := &mockTaskRepository{tasks: tasks}
-		jobRepo := &mockJobRepository{}
-		jobQueue := &mockJobQueue{enqueueErr: assert.AnError}
-		scheduler := NewScheduler(taskRepo, jobRepo, jobQueue)
+		jobRepo := &mockJobRepository{enqueueErr: assert.AnError}
+		scheduler := NewScheduler(taskRepo, jobRepo)
 
 		err := scheduler.CheckAndEnqueue(context.Background(), now)
 		assert.NoError(t, err)
@@ -223,23 +185,22 @@ func TestScheduler_CheckAndEnqueue_Conflict(t *testing.T) {
 
 	taskRepo := &mockTaskRepository{tasks: tasks}
 	jobRepo := &mockJobRepository{}
-	jobQueue := &mockJobQueue{}
-	scheduler1 := NewScheduler(taskRepo, jobRepo, jobQueue)
+	scheduler1 := NewScheduler(taskRepo, jobRepo)
 
 	// Simulate scheduler1 running first and updating the task
 	err1 := scheduler1.CheckAndEnqueue(context.Background(), now)
 	assert.NoError(t, err1)
-	assert.Len(t, jobQueue.enqueued, 2)
+	assert.Len(t, jobRepo.enqueued, 2)
 
 	// Create a new scheduler with an outdated task to simulate a race condition
 	taskCopy := *task
 	outdatedTasks := map[string]*domain.Task{"task1": &taskCopy}
-	scheduler2 := NewScheduler(&mockTaskRepository{tasks: outdatedTasks}, jobRepo, jobQueue)
+	scheduler2 := NewScheduler(&mockTaskRepository{tasks: outdatedTasks}, jobRepo)
 
 	// Simulate scheduler2 running concurrently with an outdated task version
 	err2 := scheduler2.CheckAndEnqueue(context.Background(), now)
 	assert.NoError(t, err2)
-	assert.Len(t, jobQueue.enqueued, 2) // No new jobs should be enqueued
+	assert.Len(t, jobRepo.enqueued, 2) // No new jobs should be enqueued
 
 	finalTask, err := taskRepo.FindByID(context.Background(), "task1")
 	assert.NoError(t, err)
@@ -264,9 +225,8 @@ func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T)
 
 	taskRepo := &mockTaskRepository{tasks: tasks}
 	// Configure jobRepo to fail on Save
-	jobRepo := &mockJobRepository{saveErr: assert.AnError}
-	jobQueue := &mockJobQueue{}
-	scheduler := NewScheduler(taskRepo, jobRepo, jobQueue)
+	jobRepo := &mockJobRepository{enqueueErr: assert.AnError}
+	scheduler := NewScheduler(taskRepo, jobRepo)
 
 	// Run CheckAndEnqueue - Save will fail, so LastCheckedAt should not be updated
 	err := scheduler.CheckAndEnqueue(context.Background(), now)
@@ -280,5 +240,5 @@ func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T)
 	assert.Equal(t, 1, finalTask.Version, "Version should remain unchanged when Save fails")
 
 	// Verify that no jobs were enqueued
-	assert.Len(t, jobQueue.enqueued, 0, "No jobs should be enqueued when Save fails")
+	assert.Len(t, jobRepo.enqueued, 0, "No jobs should be enqueued when Save fails")
 }

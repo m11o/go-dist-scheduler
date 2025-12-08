@@ -2,10 +2,6 @@ package domain
 
 import "time"
 
-// JobID は Job の一意な識別子を表す型です。
-// string をラップすることで型安全性を提供します。
-type JobID string
-
 type JobStatus int
 
 const (
@@ -16,7 +12,7 @@ const (
 )
 
 type Job struct {
-	ID          JobID
+	ID          string
 	TaskID      string
 	ScheduledAt time.Time
 	StartedAt   time.Time

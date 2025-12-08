@@ -20,11 +20,10 @@ func main() {
 	// インメモリリポジトリの初期化
 	taskRepo := memory.NewInMemoryTaskRepository()
 	jobRepo := memory.NewInMemoryJobRepository()
-	jobQueue := memory.NewInMemoryJobQueue()
 
 	// ユースケースの初期化（DI）
-	scheduler := usecase.NewScheduler(taskRepo, jobRepo, jobQueue)
-	executor := usecase.NewExecutor(jobRepo, jobQueue)
+	scheduler := usecase.NewScheduler(taskRepo, jobRepo)
+	executor := usecase.NewExecutor(jobRepo)
 
 	ctx := context.Background()
 

@@ -10,50 +10,31 @@ import (
 
 // Executor は、ペンディング中のジョブを実行する責務を担当します。
 type Executor struct {
-	jobRepo  domain.JobRepository
-	jobQueue domain.JobQueue
+	jobRepo domain.JobRepository
 }
 
 // NewExecutor は新しいExecutorインスタンスを生成します。
-func NewExecutor(jobRepo domain.JobRepository, jobQueue domain.JobQueue) *Executor {
+func NewExecutor(jobRepo domain.JobRepository) *Executor {
 	return &Executor{
-		jobRepo:  jobRepo,
-		jobQueue: jobQueue,
+		jobRepo: jobRepo,
 	}
 }
 
 func (e *Executor) RunPendingJob(ctx context.Context) error {
-	jobID, err := e.jobQueue.Dequeue(ctx)
-	if err != nil {
-		return err
-	}
-	if jobID == "" {
-		return nil
-	}
-
-	// キューから取得したIDを使ってDBからジョブを取得
-	job, err := e.jobRepo.FindByID(ctx, jobID)
+	job, err := e.jobRepo.Dequeue(ctx)
 	if err != nil {
 		return err
 	}
 	if job == nil {
-		log.Printf("job not found in repository: %s", jobID)
 		return nil
 	}
 
 	job.MarkAsRunning()
-	if err := e.jobRepo.Update(ctx, job); err != nil {
-		return err
-	}
 
 	log.Printf("Executing Job ID: %s", job.ID)
 	time.Sleep(10 * time.Millisecond) // Simulate work
 
 	job.MarkAsSuccess()
-	if err := e.jobRepo.Update(ctx, job); err != nil {
-		log.Printf("failed to update job %s to Success status: %v", job.ID, err)
-		return err
-	}
 
 	return nil
 }
