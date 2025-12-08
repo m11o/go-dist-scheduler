@@ -9,8 +9,12 @@ type TaskRepository interface {
 }
 
 type JobRepository interface {
+	Save(ctx context.Context, job *Job) error
+	FindByID(ctx context.Context, id string) (*Job, error)
+	Update(ctx context.Context, job *Job) error
+}
+
+type JobQueue interface {
 	Enqueue(ctx context.Context, job *Job) error
 	Dequeue(ctx context.Context) (*Job, error)
-	UpdateStatus(ctx context.Context, job *Job) error
-	FindByID(ctx context.Context, id string) (*Job, error)
 }

@@ -10,16 +10,20 @@ import (
 
 // Executor is responsible for executing pending jobs.
 type Executor struct {
-	jobRepo domain.JobRepository
+	jobRepo  domain.JobRepository
+	jobQueue domain.JobQueue
 }
 
 // NewExecutor creates a new Executor.
-func NewExecutor(jobRepo domain.JobRepository) *Executor {
-	return &Executor{jobRepo: jobRepo}
+func NewExecutor(jobRepo domain.JobRepository, jobQueue domain.JobQueue) *Executor {
+	return &Executor{
+		jobRepo:  jobRepo,
+		jobQueue: jobQueue,
+	}
 }
 
 func (e *Executor) RunPendingJob(ctx context.Context) error {
-	job, err := e.jobRepo.Dequeue(ctx)
+	job, err := e.jobQueue.Dequeue(ctx)
 	if err != nil {
 		return err
 	}
@@ -28,7 +32,7 @@ func (e *Executor) RunPendingJob(ctx context.Context) error {
 	}
 
 	job.MarkAsRunning()
-	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
+	if err := e.jobRepo.Update(ctx, job); err != nil {
 		return err
 	}
 
@@ -36,7 +40,7 @@ func (e *Executor) RunPendingJob(ctx context.Context) error {
 	time.Sleep(10 * time.Millisecond) // Simulate work
 
 	job.MarkAsSuccess()
-	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
+	if err := e.jobRepo.Update(ctx, job); err != nil {
 		log.Printf("failed to update job %s to Success status: %v", job.ID, err)
 		return err
 	}
