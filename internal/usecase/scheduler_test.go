@@ -241,7 +241,7 @@ func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T)
 	assert.NoError(t, err)
 	assert.NotNil(t, finalTask)
 	assert.Equal(t, originalLastChecked, finalTask.LastCheckedAt, "LastCheckedAt should remain unchanged when Save fails")
-	assert.Equal(t, 1, finalTask.Version, "Version should remain unchanged when Save fails")
+	assert.Equal(t, 1, finalTask.Version, "Version should remain unchanged when Enqueue fails")
 
 	// Verify that no jobs were enqueued
 	assert.Len(t, jobRepo.enqueued, 0, "No jobs should be enqueued when Save fails")
