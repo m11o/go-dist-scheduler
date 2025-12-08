@@ -28,6 +28,7 @@ func main() {
 	ctx := context.Background()
 
 	// サンプルタスクの登録（10秒ごとに実行）
+	// 注: このタスクはデモンストレーション用です。実際のHTTPリクエストは送信されません。
 	sampleTask := &domain.Task{
 		ID:             uuid.New().String(),
 		Name:           "Sample Task",
