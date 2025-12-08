@@ -161,3 +161,26 @@ func TestExecutor_RunPendingJob_NoPendingJobs(t *testing.T) {
 	err := executor.RunPendingJob(ctx)
 	assert.NoError(t, err)
 }
+
+func TestExecutor_RunPendingJob_JobNotFoundInRepository(t *testing.T) {
+	ctx := context.Background()
+	jobRepo := memory.NewInMemoryJobRepository()
+	jobQueue := memory.NewInMemoryJobQueue()
+	executor := NewExecutor(jobRepo, jobQueue)
+
+	// Enqueue a job ID without saving the job to the repository
+	// This simulates the edge case where a job is deleted from the repository
+	// but the ID remains in the queue
+	jobID := domain.JobID(uuid.NewString())
+	err := jobQueue.Enqueue(ctx, jobID)
+	assert.NoError(t, err)
+
+	// Run pending job - should handle gracefully
+	err = executor.RunPendingJob(ctx)
+	assert.NoError(t, err)
+
+	// Verify the job was not created in the repository
+	job, err := jobRepo.FindByID(ctx, jobID)
+	assert.NoError(t, err)
+	assert.Nil(t, job)
+}
