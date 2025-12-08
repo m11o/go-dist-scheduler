@@ -228,7 +228,7 @@ func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T)
 	tasks := map[string]*domain.Task{"task1": task}
 
 	taskRepo := &mockTaskRepository{tasks: tasks}
-	// Configure jobRepo to fail on Save
+	// Configure jobRepo to fail on Enqueue
 	jobRepo := &mockJobRepository{enqueueErr: assert.AnError}
 	scheduler := NewScheduler(taskRepo, jobRepo)
 
