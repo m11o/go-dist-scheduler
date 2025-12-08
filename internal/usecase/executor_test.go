@@ -58,7 +58,7 @@ func newUpdateErrorJobRepository() *updateErrorJobRepository {
 	}
 }
 
-func TestExecutor_RunPendingJob_UpdateStatusToRunningError(t *testing.T) {
+func TestExecutor_RunPendingJob_UpdateToRunningError(t *testing.T) {
 	ctx := context.Background()
 	jobRepo := newUpdateErrorJobRepository()
 	jobQueue := memory.NewInMemoryJobQueue()
