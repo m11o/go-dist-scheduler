@@ -44,7 +44,6 @@ func (r *InMemoryJobRepository) UpdateStatus(ctx context.Context, jobID string, 
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if job, ok := r.jobs[jobID]; ok {
-		job.Status = status
 		switch status {
 		case domain.JobStatusRunning:
 			job.MarkAsRunning()
