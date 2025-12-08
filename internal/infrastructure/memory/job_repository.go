@@ -40,6 +40,22 @@ func (r *InMemoryJobRepository) Dequeue(ctx context.Context) (*domain.Job, error
 	return copyJob(r.jobs[jobID]), nil
 }
 
+func (r *InMemoryJobRepository) UpdateStatus(ctx context.Context, jobID string, status domain.JobStatus) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if job, ok := r.jobs[jobID]; ok {
+		job.Status = status
+		if status == domain.JobStatusRunning {
+			job.MarkAsRunning()
+		} else if status == domain.JobStatusSuccess {
+			job.MarkAsSuccess()
+		} else if status == domain.JobStatusFailed {
+			job.MarkAsFailed()
+		}
+	}
+	return nil
+}
+
 // copyJob creates a shallow copy of a Job object.
 func copyJob(j *domain.Job) *domain.Job {
 	if j == nil {

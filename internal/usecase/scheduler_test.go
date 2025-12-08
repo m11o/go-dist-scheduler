@@ -71,6 +71,10 @@ func (m *mockJobRepository) Dequeue(ctx context.Context) (*domain.Job, error) {
 	return nil, nil
 }
 
+func (m *mockJobRepository) UpdateStatus(ctx context.Context, jobID string, status domain.JobStatus) error {
+	return nil
+}
+
 func TestScheduler_CheckAndEnqueue(t *testing.T) {
 	jst := time.FixedZone("JST", 9*60*60)
 	now := time.Date(2023, 10, 28, 10, 0, 0, 0, jst)
