@@ -77,6 +77,55 @@ func TestInMemoryJobRepository(t *testing.T) {
 	assert.Nil(t, dequeuedJob)
 }
 
+func TestInMemoryJobRepository_UpdateStatus(t *testing.T) {
+	ctx := context.Background()
+	repo := NewInMemoryJobRepository()
+
+	// Test UpdateStatus for Running status
+	job1 := &domain.Job{ID: "job1", TaskID: "task1", Status: domain.JobStatusPending}
+	err := repo.Enqueue(ctx, job1)
+	assert.NoError(t, err)
+
+	err = repo.UpdateStatus(ctx, "job1", domain.JobStatusRunning)
+	assert.NoError(t, err)
+
+	// Dequeue and verify status was updated
+	dequeuedJob, err := repo.Dequeue(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, domain.JobStatusRunning, dequeuedJob.Status)
+	assert.False(t, dequeuedJob.StartedAt.IsZero(), "StartedAt should be set when marking as Running")
+
+	// Test UpdateStatus for Success status
+	job2 := &domain.Job{ID: "job2", TaskID: "task2", Status: domain.JobStatusPending}
+	err = repo.Enqueue(ctx, job2)
+	assert.NoError(t, err)
+
+	err = repo.UpdateStatus(ctx, "job2", domain.JobStatusSuccess)
+	assert.NoError(t, err)
+
+	dequeuedJob2, err := repo.Dequeue(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, domain.JobStatusSuccess, dequeuedJob2.Status)
+	assert.False(t, dequeuedJob2.FinishedAt.IsZero(), "FinishedAt should be set when marking as Success")
+
+	// Test UpdateStatus for Failed status
+	job3 := &domain.Job{ID: "job3", TaskID: "task3", Status: domain.JobStatusPending}
+	err = repo.Enqueue(ctx, job3)
+	assert.NoError(t, err)
+
+	err = repo.UpdateStatus(ctx, "job3", domain.JobStatusFailed)
+	assert.NoError(t, err)
+
+	dequeuedJob3, err := repo.Dequeue(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, domain.JobStatusFailed, dequeuedJob3.Status)
+	assert.False(t, dequeuedJob3.FinishedAt.IsZero(), "FinishedAt should be set when marking as Failed")
+
+	// Test UpdateStatus on non-existent job (should not error)
+	err = repo.UpdateStatus(ctx, "nonexistent", domain.JobStatusSuccess)
+	assert.NoError(t, err)
+}
+
 func TestInMemoryTaskRepository_Save_Conflict(t *testing.T) {
 	repo := NewInMemoryTaskRepository()
 	ctx := context.Background()
