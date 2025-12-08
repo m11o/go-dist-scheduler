@@ -7,16 +7,17 @@ import (
 	"github.com/yourname/go-dist-scheduler/internal/domain"
 )
 
+// InMemoryJobRepository implements domain.JobRepository for in-memory job queueing.
 type InMemoryJobRepository struct {
 	mu    sync.Mutex
-	jobs  map[string]*domain.Job
 	queue []string
+	jobs  map[string]*domain.Job
 }
 
 func NewInMemoryJobRepository() *InMemoryJobRepository {
 	return &InMemoryJobRepository{
-		jobs:  make(map[string]*domain.Job),
 		queue: make([]string, 0),
+		jobs:  make(map[string]*domain.Job),
 	}
 }
 
@@ -39,24 +40,20 @@ func (r *InMemoryJobRepository) Dequeue(ctx context.Context) (*domain.Job, error
 	return copyJob(r.jobs[jobID]), nil
 }
 
-func (r *InMemoryJobRepository) UpdateStatus(ctx context.Context, job *domain.Job) error {
+func (r *InMemoryJobRepository) UpdateStatus(ctx context.Context, jobID string, status domain.JobStatus) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	// 更新がアトミックであり、渡されたジョブの完全な状態を反映することを保証するため、
-	// フィールドを個別に更新するのではなく、マップ内のオブジェクトを置き換えます。
-	if _, ok := r.jobs[job.ID]; ok {
-		r.jobs[job.ID] = copyJob(job)
+	if job, ok := r.jobs[jobID]; ok {
+		switch status {
+		case domain.JobStatusRunning:
+			job.MarkAsRunning()
+		case domain.JobStatusSuccess:
+			job.MarkAsSuccess()
+		case domain.JobStatusFailed:
+			job.MarkAsFailed()
+		}
 	}
 	return nil
-}
-
-func (r *InMemoryJobRepository) FindByID(ctx context.Context, id string) (*domain.Job, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if job, ok := r.jobs[id]; ok {
-		return copyJob(job), nil
-	}
-	return nil, nil
 }
 
 // copyJob creates a shallow copy of a Job object.

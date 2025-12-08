@@ -8,16 +8,19 @@ import (
 	"github.com/yourname/go-dist-scheduler/internal/domain"
 )
 
-// Executor is responsible for executing pending jobs.
+// Executor は、ペンディング中のジョブを実行する責務を担当します。
 type Executor struct {
 	jobRepo domain.JobRepository
 }
 
-// NewExecutor creates a new Executor.
+// NewExecutor は新しいExecutorインスタンスを生成します。
 func NewExecutor(jobRepo domain.JobRepository) *Executor {
-	return &Executor{jobRepo: jobRepo}
+	return &Executor{
+		jobRepo: jobRepo,
+	}
 }
 
+// RunPendingJob は、キューから1つのジョブをデキューして実行します。
 func (e *Executor) RunPendingJob(ctx context.Context) error {
 	job, err := e.jobRepo.Dequeue(ctx)
 	if err != nil {
@@ -27,16 +30,16 @@ func (e *Executor) RunPendingJob(ctx context.Context) error {
 		return nil
 	}
 
-	job.MarkAsRunning()
-	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
+	// Update status to Running
+	if err := e.jobRepo.UpdateStatus(ctx, job.ID, domain.JobStatusRunning); err != nil {
 		return err
 	}
 
 	log.Printf("Executing Job ID: %s", job.ID)
 	time.Sleep(10 * time.Millisecond) // Simulate work
 
-	job.MarkAsSuccess()
-	if err := e.jobRepo.UpdateStatus(ctx, job); err != nil {
+	// Update status to Success
+	if err := e.jobRepo.UpdateStatus(ctx, job.ID, domain.JobStatusSuccess); err != nil {
 		log.Printf("failed to update job %s to Success status: %v", job.ID, err)
 		return err
 	}
