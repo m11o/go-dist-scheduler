@@ -1,5 +1,7 @@
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 CREATE TABLE IF NOT EXISTS tasks (
-    id VARCHAR(255) PRIMARY KEY,
+    id UUID PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     cron_expression VARCHAR(255) NOT NULL,
     payload JSONB NOT NULL,

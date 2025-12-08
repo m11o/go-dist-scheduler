@@ -14,6 +14,8 @@ help:
 	@echo "  make lint            - Run linter"
 
 # データベース接続情報
+# 環境変数から読み込まれます。設定されていない場合はデフォルト値を使用します。
+# セキュリティ上、本番環境では環境変数を使用してください。
 DB_HOST ?= localhost
 DB_PORT ?= 5432
 DB_USER ?= scheduler
