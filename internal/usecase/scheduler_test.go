@@ -232,7 +232,7 @@ func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T)
 	jobRepo := &mockJobRepository{enqueueErr: assert.AnError}
 	scheduler := NewScheduler(taskRepo, jobRepo)
 
-	// Run CheckAndEnqueue - Save will fail, so LastCheckedAt should not be updated
+	// Run CheckAndEnqueue - Enqueue will fail, so LastCheckedAt should not be updated
 	err := scheduler.CheckAndEnqueue(context.Background(), now)
 	assert.NoError(t, err) // The error is logged but not returned
 
