@@ -36,6 +36,34 @@ Stop services and remove volumes:
 docker compose down -v
 ```
 
+### Database Migrations
+
+After starting the PostgreSQL service with Docker Compose, run the database migrations:
+
+```bash
+make migrate-up
+```
+
+To rollback the last migration:
+
+```bash
+make migrate-down
+```
+
+To check the current migration version:
+
+```bash
+make migrate-version
+```
+
+To create a new migration:
+
+```bash
+make migrate-create name=your_migration_name
+```
+
+See `make help` for all available migration commands.
+
 ### Configuration
 
 The application configuration is managed through environment variables. See `.env.example` for available options.
@@ -57,9 +85,35 @@ redisAddr := cfg.Redis.Addr()
 
 ## Development
 
+### Building and Running
+
+Build the application:
+
+```bash
+make build
+```
+
+Run the application:
+
+```bash
+make run
+```
+
+Or use the Makefile commands:
+
+```bash
+make help
+```
+
 ### Linting
 
 To run the linter locally, use the following command:
+
+```bash
+make lint
+```
+
+Or directly:
 
 ```bash
 go run github.com/golangci/golangci-lint/cmd/golangci-lint run ./...
@@ -68,6 +122,12 @@ go run github.com/golangci/golangci-lint/cmd/golangci-lint run ./...
 ### Testing
 
 Run all tests:
+
+```bash
+make test
+```
+
+Or directly:
 
 ```bash
 go test ./...
