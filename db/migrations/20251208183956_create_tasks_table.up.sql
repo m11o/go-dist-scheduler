@@ -14,12 +14,14 @@ CREATE TABLE IF NOT EXISTS tasks (
 
 CREATE INDEX idx_tasks_status ON tasks(status);
 CREATE INDEX idx_tasks_created_at ON tasks(created_at);
+CREATE INDEX idx_tasks_last_checked_at ON tasks(last_checked_at);
 
--- Trigger function to automatically update updated_at on row update
+-- Trigger function to automatically update updated_at and version on row update
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
+    NEW.version = OLD.version + 1;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
