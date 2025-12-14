@@ -29,6 +29,29 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    container_name: go-dist-scheduler-migrate
+    env_file:
+      - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-scheduler}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-scheduler}
+      DB_SSLMODE: disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./db/migrations:/app/db/migrations
+    profiles:
+      - tools
+    command: ["-action", "version"]
+
 volumes:
   postgres_data:
   redis_data:

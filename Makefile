@@ -3,64 +3,50 @@
 # デフォルトターゲット
 help:
 	@echo "Available commands:"
-	@echo "  make migrate-up       - Run all pending migrations"
-	@echo "  make migrate-down     - Rollback the last migration"
-	@echo "  make migrate-create   - Create a new migration file (usage: make migrate-create name=your_migration_name)"
-	@echo "  make migrate-force    - Force set migration version (usage: make migrate-force version=1)"
-	@echo "  make migrate-version  - Show current migration version"
+	@echo "  make migrate-up       - Run all pending migrations (in Docker)"
+	@echo "  make migrate-down     - Rollback the last migration (in Docker)"
+	@echo "  make migrate-create   - Create a new migration file (usage: make migrate-create name=your_migration_name) (in Docker)"
+	@echo "  make migrate-force    - Force set migration version (usage: make migrate-force version=1) (in Docker)"
+	@echo "  make migrate-version  - Show current migration version (in Docker)"
 	@echo "  make build           - Build the application"
 	@echo "  make run             - Run the application"
 	@echo "  make test            - Run tests"
 	@echo "  make lint            - Run linter"
 
-# データベース接続情報
-# 環境変数から読み込まれます。.envファイルで設定してください。
-# DB_PASSWORDは必須です。セキュリティのためデフォルト値は設定していません。
-DB_HOST ?= localhost
-DB_PORT ?= 5432
-DB_USER ?= scheduler
-DB_PASSWORD ?= $(shell [ -f .env ] && grep '^DB_PASSWORD=' .env | cut -d '=' -f2- || echo "")
-DB_NAME ?= scheduler
-DB_SSLMODE ?= disable
-DATABASE_URL := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)
-
-# マイグレーションディレクトリ
-MIGRATIONS_DIR := db/migrations
-
-# マイグレーションを実行
+# マイグレーションを実行（Dockerコンテナ内で実行）
 migrate-up:
-	@if [ -z "$(DB_PASSWORD)" ]; then \
-		echo "Error: DB_PASSWORD is not set. Please create .env file with DB_PASSWORD."; \
+	@if [ ! -f .env ]; then \
+		echo "Error: .env file not found. Please create .env file with DB_PASSWORD."; \
 		echo "  cp .env.example .env"; \
 		exit 1; \
 	fi
-	@echo "Running migrations..."
-	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up
+	@echo "Running migrations in Docker..."
+	@docker compose run --rm migrate -action up
 
-# 最後のマイグレーションをロールバック
+# 最後のマイグレーションをロールバック（Dockerコンテナ内で実行）
 migrate-down:
-	@if [ -z "$(DB_PASSWORD)" ]; then \
-		echo "Error: DB_PASSWORD is not set. Please create .env file with DB_PASSWORD."; \
+	@if [ ! -f .env ]; then \
+		echo "Error: .env file not found. Please create .env file with DB_PASSWORD."; \
 		echo "  cp .env.example .env"; \
 		exit 1; \
 	fi
-	@echo "Rolling back last migration..."
-	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" down 1
+	@echo "Rolling back last migration in Docker..."
+	@docker compose run --rm migrate -action down
 
-# 新しいマイグレーションファイルを作成
+# 新しいマイグレーションファイルを作成（Dockerコンテナ内で実行）
 # タイムスタンプベース（YYYYMMDDhhmmss）でファイルが作成されます
 migrate-create:
 	@if [ -z "$(name)" ]; then \
 		echo "Error: migration name is required. Usage: make migrate-create name=your_migration_name"; \
 		exit 1; \
 	fi
-	@echo "Creating migration files for $(name)..."
-	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate create -ext sql -dir $(MIGRATIONS_DIR) $(name)
+	@echo "Creating migration files in Docker for $(name)..."
+	@docker compose run --rm migrate -action create -name $(name)
 
-# マイグレーションバージョンを強制設定
+# マイグレーションバージョンを強制設定（Dockerコンテナ内で実行）
 migrate-force:
-	@if [ -z "$(DB_PASSWORD)" ]; then \
-		echo "Error: DB_PASSWORD is not set. Please create .env file with DB_PASSWORD."; \
+	@if [ ! -f .env ]; then \
+		echo "Error: .env file not found. Please create .env file with DB_PASSWORD."; \
 		echo "  cp .env.example .env"; \
 		exit 1; \
 	fi
@@ -68,18 +54,18 @@ migrate-force:
 		echo "Error: version is required. Usage: make migrate-force version=1"; \
 		exit 1; \
 	fi
-	@echo "Forcing migration version to $(version)..."
-	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" force $(version)
+	@echo "Forcing migration version in Docker to $(version)..."
+	@docker compose run --rm migrate -action force -version $(version)
 
-# 現在のマイグレーションバージョンを表示
+# 現在のマイグレーションバージョンを表示（Dockerコンテナ内で実行）
 migrate-version:
-	@if [ -z "$(DB_PASSWORD)" ]; then \
-		echo "Error: DB_PASSWORD is not set. Please create .env file with DB_PASSWORD."; \
+	@if [ ! -f .env ]; then \
+		echo "Error: .env file not found. Please create .env file with DB_PASSWORD."; \
 		echo "  cp .env.example .env"; \
 		exit 1; \
 	fi
-	@echo "Current migration version:"
-	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" version
+	@echo "Current migration version (from Docker):"
+	@docker compose run --rm migrate -action version
 
 # アプリケーションをビルド
 build:

@@ -1,0 +1,26 @@
+FROM golang:1.25.5-alpine AS builder
+
+WORKDIR /app
+
+# Copy go mod files and vendor directory
+COPY go.mod go.sum ./
+COPY vendor ./vendor
+
+# Copy source code
+COPY cmd ./cmd
+COPY internal ./internal
+
+# Build the migrate command using vendor
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor -o /migrate ./cmd/migrate
+
+FROM alpine:latest
+
+WORKDIR /app
+
+# Copy the binary from builder
+COPY --from=builder /migrate /app/migrate
+
+# Copy migration files
+COPY db/migrations /app/db/migrations
+
+ENTRYPOINT ["/app/migrate"]

@@ -40,11 +40,16 @@ docker compose down -v
 
 ### Database Migrations
 
-After starting the PostgreSQL service with Docker Compose, run the database migrations:
+Database migrations are executed inside Docker containers using Go code. After starting the PostgreSQL service with Docker Compose, run the database migrations:
 
 ```bash
 make migrate-up
 ```
+
+This command:
+1. Builds the migration container with Go code
+2. Connects to the PostgreSQL container using the Docker network
+3. Executes all pending migrations
 
 To rollback the last migration:
 
@@ -58,13 +63,15 @@ To check the current migration version:
 make migrate-version
 ```
 
-To create a new migration:
+To create a new migration (creates timestamped files in `db/migrations`):
 
 ```bash
 make migrate-create name=your_migration_name
 ```
 
 See `make help` for all available migration commands.
+
+**Note:** All migration commands run inside Docker containers, ensuring consistent behavior across different development environments.
 
 ### Configuration
 
