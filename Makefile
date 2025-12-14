@@ -44,7 +44,7 @@ migrate-create:
 		exit 1; \
 	fi
 	@echo "Creating migration files for $(name)..."
-	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate create -ext sql -dir $(MIGRATIONS_DIR) $(name)
+	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate create -ext sql -dir $(MIGRATIONS_DIR) -seq $(name)
 
 # マイグレーションバージョンを強制設定
 migrate-force:
