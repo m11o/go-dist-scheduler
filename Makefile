@@ -12,7 +12,7 @@ migrate: ## Run database migrations
 		echo "psqldef is not installed. Installing..."; \
 		go install github.com/sqldef/sqldef/cmd/psqldef@latest; \
 	fi
-	@PATH="$(HOME)/go/bin:$(PATH)" psqldef -U $(DB_USER) -p $(DB_PORT) -h $(DB_HOST) $(DB_NAME) --password=$(DB_PASSWORD) < db/migrations/schema.sql
+	@PGPASSWORD=$(DB_PASSWORD) PATH="$(HOME)/go/bin:$(PATH)" psqldef -U $(DB_USER) -p $(DB_PORT) -h $(DB_HOST) $(DB_NAME) < db/migrations/schema.sql
 
 migrate-dry: ## Run database migrations in dry-run mode
 	@echo "Running database migrations (dry-run)..."
@@ -20,7 +20,7 @@ migrate-dry: ## Run database migrations in dry-run mode
 		echo "psqldef is not installed. Installing..."; \
 		go install github.com/sqldef/sqldef/cmd/psqldef@latest; \
 	fi
-	@PATH="$(HOME)/go/bin:$(PATH)" psqldef -U $(DB_USER) -p $(DB_PORT) -h $(DB_HOST) $(DB_NAME) --password=$(DB_PASSWORD) --dry-run < db/migrations/schema.sql
+	@PGPASSWORD=$(DB_PASSWORD) PATH="$(HOME)/go/bin:$(PATH)" psqldef -U $(DB_USER) -p $(DB_PORT) -h $(DB_HOST) $(DB_NAME) --dry-run < db/migrations/schema.sql
 
 lint: ## Run golangci-lint
 	@echo "Running linter..."

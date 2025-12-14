@@ -1,4 +1,11 @@
 -- tasks table
+-- The payload column stores HTTPRequestInfo as JSON with the following structure:
+-- {
+--   "url": "string",
+--   "method": "string",
+--   "headers": {"key": "value", ...},
+--   "body": "base64-encoded string"
+-- }
 CREATE TABLE IF NOT EXISTS tasks (
     id VARCHAR(255) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
