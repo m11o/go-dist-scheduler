@@ -155,7 +155,7 @@ func TestTaskRepository_Save_Conflict(t *testing.T) {
 	ctx := context.Background()
 
 	taskID := uuid.NewString()
-	
+
 	// Insert initial task
 	task := &domain.Task{
 		ID:             taskID,
@@ -231,7 +231,7 @@ func TestTaskRepository_FindAllActive(t *testing.T) {
 	ctx := context.Background()
 
 	activeTaskID := uuid.NewString()
-	
+
 	// Insert active task
 	activeTask := &domain.Task{
 		ID:             activeTaskID,
