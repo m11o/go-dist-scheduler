@@ -29,15 +29,26 @@ MIGRATIONS_DIR := db/migrations
 
 # マイグレーションを実行
 migrate-up:
+	@if [ -z "$(DB_PASSWORD)" ]; then \
+		echo "Error: DB_PASSWORD is not set. Please create .env file with DB_PASSWORD."; \
+		echo "  cp .env.example .env"; \
+		exit 1; \
+	fi
 	@echo "Running migrations..."
 	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" up
 
 # 最後のマイグレーションをロールバック
 migrate-down:
+	@if [ -z "$(DB_PASSWORD)" ]; then \
+		echo "Error: DB_PASSWORD is not set. Please create .env file with DB_PASSWORD."; \
+		echo "  cp .env.example .env"; \
+		exit 1; \
+	fi
 	@echo "Rolling back last migration..."
 	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" down 1
 
 # 新しいマイグレーションファイルを作成
+# タイムスタンプベース（YYYYMMDDhhmmss）でファイルが作成されます
 migrate-create:
 	@if [ -z "$(name)" ]; then \
 		echo "Error: migration name is required. Usage: make migrate-create name=your_migration_name"; \
@@ -48,6 +59,11 @@ migrate-create:
 
 # マイグレーションバージョンを強制設定
 migrate-force:
+	@if [ -z "$(DB_PASSWORD)" ]; then \
+		echo "Error: DB_PASSWORD is not set. Please create .env file with DB_PASSWORD."; \
+		echo "  cp .env.example .env"; \
+		exit 1; \
+	fi
 	@if [ -z "$(version)" ]; then \
 		echo "Error: version is required. Usage: make migrate-force version=1"; \
 		exit 1; \
@@ -57,6 +73,11 @@ migrate-force:
 
 # 現在のマイグレーションバージョンを表示
 migrate-version:
+	@if [ -z "$(DB_PASSWORD)" ]; then \
+		echo "Error: DB_PASSWORD is not set. Please create .env file with DB_PASSWORD."; \
+		echo "  cp .env.example .env"; \
+		exit 1; \
+	fi
 	@echo "Current migration version:"
 	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate -path $(MIGRATIONS_DIR) -database "$(DATABASE_URL)" version
 
