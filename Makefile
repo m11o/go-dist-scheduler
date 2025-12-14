@@ -19,7 +19,7 @@ help:
 DB_HOST ?= localhost
 DB_PORT ?= 5432
 DB_USER ?= scheduler
-DB_PASSWORD ?= $(shell [ -f .env ] && grep '^DB_PASSWORD=' .env | cut -d '=' -f2 || echo "")
+DB_PASSWORD ?= $(shell [ -f .env ] && grep '^DB_PASSWORD=' .env | cut -d '=' -f2- || echo "")
 DB_NAME ?= scheduler
 DB_SSLMODE ?= disable
 DATABASE_URL := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)
@@ -44,7 +44,7 @@ migrate-create:
 		exit 1; \
 	fi
 	@echo "Creating migration files for $(name)..."
-	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate create -ext sql -dir $(MIGRATIONS_DIR) -seq $(name)
+	@go run -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate create -ext sql -dir $(MIGRATIONS_DIR) $(name)
 
 # マイグレーションバージョンを強制設定
 migrate-force:
