@@ -54,8 +54,12 @@ func setupTestDB(t *testing.T) (*sql.DB, func()) {
 	// Clean up function to close DB and clean test data
 	cleanup := func() {
 		// Clean up test data
-		_, _ = db.Exec("DELETE FROM tasks")
-		db.Close()
+		if _, err := db.Exec("DELETE FROM tasks"); err != nil {
+			t.Logf("warning: failed to clean up tasks: %v", err)
+		}
+		if err := db.Close(); err != nil {
+			t.Logf("warning: failed to close database connection: %v", err)
+		}
 	}
 
 	return db, cleanup

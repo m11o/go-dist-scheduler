@@ -39,30 +39,45 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 		return domain.ErrConflict
 	}
 
-	query := `
-		INSERT INTO tasks (id, name, cron_expression, payload, status, created_at, updated_at, last_checked_at, version)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (id) DO UPDATE SET
-			name = EXCLUDED.name,
-			cron_expression = EXCLUDED.cron_expression,
-			payload = EXCLUDED.payload,
-			status = EXCLUDED.status,
-			updated_at = EXCLUDED.updated_at,
-			last_checked_at = EXCLUDED.last_checked_at,
-			version = EXCLUDED.version
-	`
+	var result sql.Result
+	if existingVersion.Valid {
+		// Update existing task with version check
+		query := `
+			UPDATE tasks
+			SET name = $2, cron_expression = $3, payload = $4, status = $5,
+				updated_at = $6, last_checked_at = $7, version = $8
+			WHERE id = $1 AND version = $9
+		`
+		result, err = r.db.ExecContext(ctx, query,
+			dto.ID,
+			dto.Name,
+			dto.CronExpression,
+			dto.Payload,
+			dto.Status,
+			dto.UpdatedAt,
+			dto.LastCheckedAt,
+			dto.Version,
+			dto.Version-1, // Expected previous version
+		)
+	} else {
+		// Insert new task
+		query := `
+			INSERT INTO tasks (id, name, cron_expression, payload, status, created_at, updated_at, last_checked_at, version)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		`
+		result, err = r.db.ExecContext(ctx, query,
+			dto.ID,
+			dto.Name,
+			dto.CronExpression,
+			dto.Payload,
+			dto.Status,
+			dto.CreatedAt,
+			dto.UpdatedAt,
+			dto.LastCheckedAt,
+			dto.Version,
+		)
+	}
 
-	_, err = r.db.ExecContext(ctx, query,
-		dto.ID,
-		dto.Name,
-		dto.CronExpression,
-		dto.Payload,
-		dto.Status,
-		dto.CreatedAt,
-		dto.UpdatedAt,
-		dto.LastCheckedAt,
-		dto.Version,
-	)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) {
@@ -72,6 +87,17 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 			}
 		}
 		return fmt.Errorf("failed to save task: %w", err)
+	}
+
+	// Check if update affected any rows (for optimistic locking)
+	if existingVersion.Valid {
+		rowsAffected, err := result.RowsAffected()
+		if err != nil {
+			return fmt.Errorf("failed to get rows affected: %w", err)
+		}
+		if rowsAffected == 0 {
+			return domain.ErrConflict
+		}
 	}
 
 	return nil
