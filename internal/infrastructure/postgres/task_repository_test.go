@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/yourname/go-dist-scheduler/internal/domain"
@@ -53,7 +54,7 @@ func setupTestDB(t *testing.T) (*sql.DB, func()) {
 	// Clean up function to close DB and clean test data
 	cleanup := func() {
 		// Clean up test data
-		_, _ = db.Exec("DELETE FROM tasks WHERE id LIKE 'test-%'")
+		_, _ = db.Exec("DELETE FROM tasks")
 		db.Close()
 	}
 
@@ -68,7 +69,7 @@ func TestTaskRepository_Save_Insert(t *testing.T) {
 	ctx := context.Background()
 
 	task := &domain.Task{
-		ID:             "test-task-1",
+		ID:             uuid.NewString(),
 		Name:           "Test Task 1",
 		CronExpression: "* * * * *",
 		Payload: domain.HTTPRequestInfo{
@@ -110,7 +111,7 @@ func TestTaskRepository_Save_Update(t *testing.T) {
 
 	// Insert initial task
 	task := &domain.Task{
-		ID:             "test-task-2",
+		ID:             uuid.NewString(),
 		Name:           "Test Task 2",
 		CronExpression: "* * * * *",
 		Payload: domain.HTTPRequestInfo{
@@ -149,9 +150,11 @@ func TestTaskRepository_Save_Conflict(t *testing.T) {
 	repo := postgres.NewTaskRepository(db)
 	ctx := context.Background()
 
+	taskID := uuid.NewString()
+	
 	// Insert initial task
 	task := &domain.Task{
-		ID:             "test-task-3",
+		ID:             taskID,
 		Name:           "Test Task 3",
 		CronExpression: "* * * * *",
 		Payload: domain.HTTPRequestInfo{
@@ -169,7 +172,7 @@ func TestTaskRepository_Save_Conflict(t *testing.T) {
 
 	// Try to save with the same version (should fail)
 	task2 := &domain.Task{
-		ID:             "test-task-3",
+		ID:             taskID,
 		Name:           "Conflicting Task",
 		CronExpression: "* * * * *",
 		Payload: domain.HTTPRequestInfo{
@@ -187,7 +190,7 @@ func TestTaskRepository_Save_Conflict(t *testing.T) {
 
 	// Save with correct version should succeed
 	task3 := &domain.Task{
-		ID:             "test-task-3",
+		ID:             taskID,
 		Name:           "Correct Version Task",
 		CronExpression: "* * * * *",
 		Payload: domain.HTTPRequestInfo{
@@ -211,7 +214,7 @@ func TestTaskRepository_FindByID_NotFound(t *testing.T) {
 	repo := postgres.NewTaskRepository(db)
 	ctx := context.Background()
 
-	task, err := repo.FindByID(ctx, "non-existent-id")
+	task, err := repo.FindByID(ctx, uuid.NewString())
 	assert.NoError(t, err)
 	assert.Nil(t, task)
 }
@@ -223,9 +226,11 @@ func TestTaskRepository_FindAllActive(t *testing.T) {
 	repo := postgres.NewTaskRepository(db)
 	ctx := context.Background()
 
+	activeTaskID := uuid.NewString()
+	
 	// Insert active task
 	activeTask := &domain.Task{
-		ID:             "test-task-active-1",
+		ID:             activeTaskID,
 		Name:           "Active Task",
 		CronExpression: "* * * * *",
 		Payload: domain.HTTPRequestInfo{
@@ -242,7 +247,7 @@ func TestTaskRepository_FindAllActive(t *testing.T) {
 
 	// Insert paused task
 	pausedTask := &domain.Task{
-		ID:             "test-task-paused-1",
+		ID:             uuid.NewString(),
 		Name:           "Paused Task",
 		CronExpression: "* * * * *",
 		Payload: domain.HTTPRequestInfo{
@@ -262,16 +267,16 @@ func TestTaskRepository_FindAllActive(t *testing.T) {
 	assert.NoError(t, err)
 	require.NotNil(t, tasks)
 
-	// Filter to only test tasks
+	// Filter to only test task
 	var testActiveTasks []*domain.Task
 	for _, task := range tasks {
-		if task.ID == "test-task-active-1" {
+		if task.ID == activeTaskID {
 			testActiveTasks = append(testActiveTasks, task)
 		}
 	}
 
 	assert.Len(t, testActiveTasks, 1)
-	assert.Equal(t, "test-task-active-1", testActiveTasks[0].ID)
+	assert.Equal(t, activeTaskID, testActiveTasks[0].ID)
 	assert.Equal(t, domain.TaskStatusActive, testActiveTasks[0].Status)
 }
 
@@ -284,7 +289,7 @@ func TestTaskRepository_SaveAndRetrieve_WithLastCheckedAt(t *testing.T) {
 
 	lastChecked := time.Now().UTC().Add(-1 * time.Hour)
 	task := &domain.Task{
-		ID:             "test-task-4",
+		ID:             uuid.NewString(),
 		Name:           "Test Task with LastCheckedAt",
 		CronExpression: "* * * * *",
 		Payload: domain.HTTPRequestInfo{
