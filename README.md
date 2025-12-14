@@ -42,7 +42,7 @@ Run database migrations to create the necessary tables:
 
 ```bash
 # Load environment variables from .env file
-export $(cat .env | xargs)
+set -a; source .env; set +a
 
 # Run migrations
 make migrate
@@ -51,7 +51,7 @@ make migrate
 To preview migration changes without applying them:
 
 ```bash
-export $(cat .env | xargs)
+set -a; source .env; set +a
 make migrate-dry
 ```
 

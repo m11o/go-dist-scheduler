@@ -10,7 +10,7 @@ migrate: ## Run database migrations
 	@echo "Running database migrations..."
 	@if ! command -v psqldef > /dev/null 2>&1; then \
 		echo "psqldef is not installed. Installing..."; \
-		go install github.com/sqldef/sqldef/cmd/psqldef@latest; \
+		go install github.com/sqldef/sqldef/cmd/psqldef@v0.17.29; \
 	fi
 	@PGPASSWORD=$(DB_PASSWORD) PATH="$(HOME)/go/bin:$(PATH)" psqldef -U $(DB_USER) -p $(DB_PORT) -h $(DB_HOST) $(DB_NAME) < db/migrations/schema.sql
 
@@ -18,7 +18,7 @@ migrate-dry: ## Run database migrations in dry-run mode
 	@echo "Running database migrations (dry-run)..."
 	@if ! command -v psqldef > /dev/null 2>&1; then \
 		echo "psqldef is not installed. Installing..."; \
-		go install github.com/sqldef/sqldef/cmd/psqldef@latest; \
+		go install github.com/sqldef/sqldef/cmd/psqldef@v0.17.29; \
 	fi
 	@PGPASSWORD=$(DB_PASSWORD) PATH="$(HOME)/go/bin:$(PATH)" psqldef -U $(DB_USER) -p $(DB_PORT) -h $(DB_HOST) $(DB_NAME) --dry-run < db/migrations/schema.sql
 
