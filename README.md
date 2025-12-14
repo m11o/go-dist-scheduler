@@ -36,6 +36,25 @@ Stop services and remove volumes:
 docker compose down -v
 ```
 
+### Database Migration
+
+Run database migrations to create the necessary tables:
+
+```bash
+# Load environment variables from .env file
+set -a; source .env; set +a
+
+# Run migrations
+make migrate
+```
+
+To preview migration changes without applying them:
+
+```bash
+set -a; source .env; set +a
+make migrate-dry
+```
+
 ### Configuration
 
 The application configuration is managed through environment variables. See `.env.example` for available options.
