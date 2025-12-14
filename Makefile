@@ -14,12 +14,12 @@ help:
 	@echo "  make lint            - Run linter"
 
 # データベース接続情報
-# 環境変数から読み込まれます。設定されていない場合はデフォルト値を使用します。
-# WARNING: デフォルトのパスワードは開発環境専用です。本番環境では必ず環境変数で設定してください。
+# 環境変数から読み込まれます。.envファイルで設定してください。
+# DB_PASSWORDは必須です。セキュリティのためデフォルト値は設定していません。
 DB_HOST ?= localhost
 DB_PORT ?= 5432
 DB_USER ?= scheduler
-DB_PASSWORD ?= password
+DB_PASSWORD ?= $(shell [ -f .env ] && grep '^DB_PASSWORD=' .env | cut -d '=' -f2 || echo "")
 DB_NAME ?= scheduler
 DB_SSLMODE ?= disable
 DATABASE_URL := postgres://$(DB_USER):$(DB_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)?sslmode=$(DB_SSLMODE)

@@ -15,6 +15,8 @@
    ```
 
 2. Edit `.env` to configure your local environment if needed. The default values work with the Docker Compose setup.
+   
+   **Important:** `DB_PASSWORD` must be set in the `.env` file for database connections to work. For development, the default value in `.env.example` is acceptable, but use a strong password in production.
 
 ### Running with Docker Compose
 
