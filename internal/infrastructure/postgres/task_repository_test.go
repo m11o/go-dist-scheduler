@@ -85,7 +85,6 @@ func TestTaskRepository_Save_Insert(t *testing.T) {
 		Status:    domain.TaskStatusActive,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		Version:   1,
 	}
 
 	err := repo.Save(ctx, task)
@@ -103,7 +102,6 @@ func TestTaskRepository_Save_Insert(t *testing.T) {
 	assert.Equal(t, task.Payload.Method, savedTask.Payload.Method)
 	assert.Equal(t, task.Payload.Headers, savedTask.Payload.Headers)
 	assert.Equal(t, task.Payload.Body, savedTask.Payload.Body)
-	assert.Equal(t, task.Version, savedTask.Version)
 }
 
 func TestTaskRepository_Save_Update(t *testing.T) {
@@ -125,7 +123,6 @@ func TestTaskRepository_Save_Update(t *testing.T) {
 		Status:    domain.TaskStatusActive,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		Version:   1,
 	}
 
 	err := repo.Save(ctx, task)
@@ -133,7 +130,6 @@ func TestTaskRepository_Save_Update(t *testing.T) {
 
 	// Update the task
 	task.Name = "Updated Task 2"
-	task.Version = 2
 	task.UpdatedAt = time.Now().UTC()
 
 	err = repo.Save(ctx, task)
@@ -144,72 +140,8 @@ func TestTaskRepository_Save_Update(t *testing.T) {
 	assert.NoError(t, err)
 	require.NotNil(t, savedTask)
 	assert.Equal(t, "Updated Task 2", savedTask.Name)
-	assert.Equal(t, 2, savedTask.Version)
 }
 
-func TestTaskRepository_Save_Conflict(t *testing.T) {
-	db, cleanup := setupTestDB(t)
-	defer cleanup()
-
-	repo := postgres.NewTaskRepository(db)
-	ctx := context.Background()
-
-	taskID := uuid.NewString()
-
-	// Insert initial task
-	task := &domain.Task{
-		ID:             taskID,
-		Name:           "Test Task 3",
-		CronExpression: "* * * * *",
-		Payload: domain.HTTPRequestInfo{
-			URL:    "http://example.com",
-			Method: "GET",
-		},
-		Status:    domain.TaskStatusActive,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-		Version:   1,
-	}
-
-	err := repo.Save(ctx, task)
-	require.NoError(t, err)
-
-	// Try to save with the same version (should fail)
-	task2 := &domain.Task{
-		ID:             taskID,
-		Name:           "Conflicting Task",
-		CronExpression: "* * * * *",
-		Payload: domain.HTTPRequestInfo{
-			URL:    "http://example.com",
-			Method: "GET",
-		},
-		Status:    domain.TaskStatusActive,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-		Version:   1, // Same version, should conflict
-	}
-
-	err = repo.Save(ctx, task2)
-	assert.ErrorIs(t, err, domain.ErrConflict)
-
-	// Save with correct version should succeed
-	task3 := &domain.Task{
-		ID:             taskID,
-		Name:           "Correct Version Task",
-		CronExpression: "* * * * *",
-		Payload: domain.HTTPRequestInfo{
-			URL:    "http://example.com",
-			Method: "GET",
-		},
-		Status:    domain.TaskStatusActive,
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
-		Version:   2,
-	}
-
-	err = repo.Save(ctx, task3)
-	assert.NoError(t, err)
-}
 
 func TestTaskRepository_FindByID_NotFound(t *testing.T) {
 	db, cleanup := setupTestDB(t)
@@ -244,7 +176,6 @@ func TestTaskRepository_FindAllActive(t *testing.T) {
 		Status:    domain.TaskStatusActive,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		Version:   1,
 	}
 	err := repo.Save(ctx, activeTask)
 	require.NoError(t, err)
@@ -261,7 +192,6 @@ func TestTaskRepository_FindAllActive(t *testing.T) {
 		Status:    domain.TaskStatusPaused,
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		Version:   1,
 	}
 	err = repo.Save(ctx, pausedTask)
 	require.NoError(t, err)
@@ -304,7 +234,6 @@ func TestTaskRepository_SaveAndRetrieve_WithLastCheckedAt(t *testing.T) {
 		CreatedAt:     time.Now().UTC(),
 		UpdatedAt:     time.Now().UTC(),
 		LastCheckedAt: lastChecked,
-		Version:       1,
 	}
 
 	err := repo.Save(ctx, task)

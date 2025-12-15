@@ -21,10 +21,6 @@ func (m *mockTaskRepository) Save(ctx context.Context, task *domain.Task) error 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	existing, ok := m.tasks[task.ID]
-	if ok && existing.Version != task.Version-1 {
-		return domain.ErrConflict
-	}
 	m.tasks[task.ID] = task
 	return nil
 }
@@ -180,36 +176,7 @@ func TestScheduler_CheckAndEnqueue(t *testing.T) {
 	})
 }
 
-func TestScheduler_CheckAndEnqueue_Conflict(t *testing.T) {
-	jst := time.FixedZone("JST", 9*60*60)
-	now := time.Date(2023, 10, 28, 10, 0, 0, 0, jst)
 
-	task := &domain.Task{ID: "task1", CronExpression: "* * * * *", Status: domain.TaskStatusActive, CreatedAt: now.Add(-2 * time.Minute), Version: 1}
-	tasks := map[string]*domain.Task{"task1": task}
-
-	taskRepo := &mockTaskRepository{tasks: tasks}
-	jobRepo := &mockJobRepository{}
-	scheduler1 := NewScheduler(taskRepo, jobRepo)
-
-	// Simulate scheduler1 running first and updating the task
-	err1 := scheduler1.CheckAndEnqueue(context.Background(), now)
-	assert.NoError(t, err1)
-	assert.Len(t, jobRepo.enqueued, 2)
-
-	// Create a new scheduler with an outdated task to simulate a race condition
-	taskCopy := *task
-	outdatedTasks := map[string]*domain.Task{"task1": &taskCopy}
-	scheduler2 := NewScheduler(&mockTaskRepository{tasks: outdatedTasks}, jobRepo)
-
-	// Simulate scheduler2 running concurrently with an outdated task version
-	err2 := scheduler2.CheckAndEnqueue(context.Background(), now)
-	assert.NoError(t, err2)
-	assert.Len(t, jobRepo.enqueued, 2) // No new jobs should be enqueued
-
-	finalTask, err := taskRepo.FindByID(context.Background(), "task1")
-	assert.NoError(t, err)
-	assert.Equal(t, 2, finalTask.Version)
-}
 
 func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T) {
 	jst := time.FixedZone("JST", 9*60*60)
@@ -223,7 +190,6 @@ func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T)
 		Status:         domain.TaskStatusActive,
 		CreatedAt:      now.Add(-10 * time.Minute),
 		LastCheckedAt:  originalLastChecked,
-		Version:        1,
 	}
 	tasks := map[string]*domain.Task{"task1": task}
 
@@ -241,7 +207,6 @@ func TestScheduler_CheckAndEnqueue_SaveFailsLastCheckedAtUnchanged(t *testing.T)
 	assert.NoError(t, err)
 	assert.NotNil(t, finalTask)
 	assert.Equal(t, originalLastChecked, finalTask.LastCheckedAt, "LastCheckedAt should remain unchanged when Enqueue fails")
-	assert.Equal(t, 1, finalTask.Version, "Version should remain unchanged when Enqueue fails")
 
 	// Verify that no jobs were enqueued
 	assert.Len(t, jobRepo.enqueued, 0, "No jobs should be enqueued when Enqueue fails")

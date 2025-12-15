@@ -44,7 +44,6 @@ func main() {
 		Status:    domain.TaskStatusActive,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		Version:   0,
 	}
 
 	if err := taskRepo.Save(ctx, sampleTask); err != nil {

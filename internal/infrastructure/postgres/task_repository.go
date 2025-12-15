@@ -37,23 +37,18 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 	}()
 
 	// Use SELECT ... FOR UPDATE to acquire pessimistic lock
-	var existingVersion sql.NullInt64
-	err = tx.QueryRowContext(ctx, "SELECT version FROM tasks WHERE id = $1 FOR UPDATE", dto.ID).Scan(&existingVersion)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	var exists bool
+	err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = $1 FOR UPDATE)", dto.ID).Scan(&exists)
+	if err != nil {
 		return fmt.Errorf("failed to lock task: %w", err)
 	}
 
-	// Check for version conflict
-	if existingVersion.Valid && int(existingVersion.Int64) != dto.Version-1 {
-		return domain.ErrConflict
-	}
-
-	if existingVersion.Valid {
+	if exists {
 		// Update existing task
 		query := `
 			UPDATE tasks
 			SET name = $2, cron_expression = $3, payload = $4, status = $5,
-				updated_at = $6, last_checked_at = $7, version = $8
+				updated_at = $6, last_checked_at = $7
 			WHERE id = $1
 		`
 		_, err = tx.ExecContext(ctx, query,
@@ -64,13 +59,12 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 			dto.Status,
 			dto.UpdatedAt,
 			dto.LastCheckedAt,
-			dto.Version,
 		)
 	} else {
 		// Insert new task
 		query := `
-			INSERT INTO tasks (id, name, cron_expression, payload, status, created_at, updated_at, last_checked_at, version)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+			INSERT INTO tasks (id, name, cron_expression, payload, status, created_at, updated_at, last_checked_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		`
 		_, err = tx.ExecContext(ctx, query,
 			dto.ID,
@@ -81,7 +75,6 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 			dto.CreatedAt,
 			dto.UpdatedAt,
 			dto.LastCheckedAt,
-			dto.Version,
 		)
 	}
 
@@ -107,7 +100,7 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 // FindByID finds a task by its ID.
 func (r *TaskRepository) FindByID(ctx context.Context, id string) (*domain.Task, error) {
 	query := `
-		SELECT id, name, cron_expression, payload, status, created_at, updated_at, last_checked_at, version
+		SELECT id, name, cron_expression, payload, status, created_at, updated_at, last_checked_at
 		FROM tasks
 		WHERE id = $1
 	`
@@ -122,7 +115,6 @@ func (r *TaskRepository) FindByID(ctx context.Context, id string) (*domain.Task,
 		&dto.CreatedAt,
 		&dto.UpdatedAt,
 		&dto.LastCheckedAt,
-		&dto.Version,
 	)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil
@@ -142,7 +134,7 @@ func (r *TaskRepository) FindByID(ctx context.Context, id string) (*domain.Task,
 // FindAllActive finds all active tasks.
 func (r *TaskRepository) FindAllActive(ctx context.Context) ([]*domain.Task, error) {
 	query := `
-		SELECT id, name, cron_expression, payload, status, created_at, updated_at, last_checked_at, version
+		SELECT id, name, cron_expression, payload, status, created_at, updated_at, last_checked_at
 		FROM tasks
 		WHERE status = $1
 	`
@@ -165,7 +157,6 @@ func (r *TaskRepository) FindAllActive(ctx context.Context) ([]*domain.Task, err
 			&dto.CreatedAt,
 			&dto.UpdatedAt,
 			&dto.LastCheckedAt,
-			&dto.Version,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to scan task row: %w", err)

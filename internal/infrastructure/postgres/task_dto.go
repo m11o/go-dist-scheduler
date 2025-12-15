@@ -19,7 +19,6 @@ type TaskDTO struct {
 	CreatedAt      time.Time      `db:"created_at"`
 	UpdatedAt      time.Time      `db:"updated_at"`
 	LastCheckedAt  sql.NullTime   `db:"last_checked_at"`
-	Version        int            `db:"version"`
 }
 
 // payloadJSON represents the JSON structure stored in the payload column.
@@ -53,7 +52,6 @@ func ToDTO(task *domain.Task) (*TaskDTO, error) {
 		Status:         int(task.Status),
 		CreatedAt:      task.CreatedAt,
 		UpdatedAt:      task.UpdatedAt,
-		Version:        task.Version,
 	}
 
 	if !task.LastCheckedAt.IsZero() {
@@ -90,7 +88,6 @@ func (dto *TaskDTO) ToDomain() (*domain.Task, error) {
 		Status:    domain.TaskStatus(dto.Status),
 		CreatedAt: dto.CreatedAt,
 		UpdatedAt: dto.UpdatedAt,
-		Version:   dto.Version,
 	}
 
 	if dto.LastCheckedAt.Valid {
