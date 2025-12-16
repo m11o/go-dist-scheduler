@@ -142,7 +142,6 @@ func TestTaskRepository_Save_Update(t *testing.T) {
 	assert.Equal(t, "Updated Task 2", savedTask.Name)
 }
 
-
 func TestTaskRepository_FindByID_NotFound(t *testing.T) {
 	db, cleanup := setupTestDB(t)
 	defer cleanup()
