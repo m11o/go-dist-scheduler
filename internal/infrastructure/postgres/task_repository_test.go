@@ -246,3 +246,181 @@ func TestTaskRepository_SaveAndRetrieve_WithLastCheckedAt(t *testing.T) {
 	// Allow small time difference due to database precision
 	assert.WithinDuration(t, lastChecked, savedTask.LastCheckedAt, time.Second)
 }
+
+func TestTaskRepository_PayloadEdgeCases(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	repo := postgres.NewTaskRepository(db)
+	ctx := context.Background()
+
+	tests := []struct {
+		name    string
+		payload domain.HTTPRequestInfo
+	}{
+		{
+			name: "nil body",
+			payload: domain.HTTPRequestInfo{
+				URL:     "http://example.com",
+				Method:  "POST",
+				Headers: map[string]string{"Content-Type": "application/json"},
+				Body:    nil,
+			},
+		},
+		{
+			name: "empty body",
+			payload: domain.HTTPRequestInfo{
+				URL:     "http://example.com",
+				Method:  "POST",
+				Headers: map[string]string{"Content-Type": "application/json"},
+				Body:    []byte{},
+			},
+		},
+		{
+			name: "nil headers",
+			payload: domain.HTTPRequestInfo{
+				URL:     "http://example.com",
+				Method:  "POST",
+				Headers: nil,
+				Body:    []byte(`{"key":"value"}`),
+			},
+		},
+		{
+			name: "empty headers",
+			payload: domain.HTTPRequestInfo{
+				URL:     "http://example.com",
+				Method:  "POST",
+				Headers: map[string]string{},
+				Body:    []byte(`{"key":"value"}`),
+			},
+		},
+		{
+			name: "empty URL",
+			payload: domain.HTTPRequestInfo{
+				URL:     "",
+				Method:  "POST",
+				Headers: map[string]string{"Content-Type": "application/json"},
+				Body:    []byte(`{"key":"value"}`),
+			},
+		},
+		{
+			name: "empty Method",
+			payload: domain.HTTPRequestInfo{
+				URL:     "http://example.com",
+				Method:  "",
+				Headers: map[string]string{"Content-Type": "application/json"},
+				Body:    []byte(`{"key":"value"}`),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := &domain.Task{
+				ID:             uuid.NewString(),
+				Name:           "Edge Case Task: " + tt.name,
+				CronExpression: "* * * * *",
+				Payload:        tt.payload,
+				Status:         domain.TaskStatusActive,
+				CreatedAt:      time.Now().UTC(),
+				UpdatedAt:      time.Now().UTC(),
+			}
+
+			// Save the task
+			err := repo.Save(ctx, task)
+			require.NoError(t, err, "failed to save task with %s", tt.name)
+
+			// Retrieve and verify
+			savedTask, err := repo.FindByID(ctx, task.ID)
+			require.NoError(t, err, "failed to retrieve task with %s", tt.name)
+			require.NotNil(t, savedTask)
+
+			assert.Equal(t, tt.payload.URL, savedTask.Payload.URL)
+			assert.Equal(t, tt.payload.Method, savedTask.Payload.Method)
+			assert.Equal(t, tt.payload.Body, savedTask.Payload.Body)
+
+			// Compare headers (handling nil vs empty map)
+			if tt.payload.Headers == nil {
+				assert.Nil(t, savedTask.Payload.Headers)
+			} else {
+				assert.Equal(t, tt.payload.Headers, savedTask.Payload.Headers)
+			}
+		})
+	}
+}
+
+func TestTaskRepository_ConcurrentUpdates(t *testing.T) {
+	db, cleanup := setupTestDB(t)
+	defer cleanup()
+
+	repo := postgres.NewTaskRepository(db)
+	ctx := context.Background()
+
+	// Create initial task
+	taskID := uuid.NewString()
+	task := &domain.Task{
+		ID:             taskID,
+		Name:           "Concurrent Test Task",
+		CronExpression: "* * * * *",
+		Payload: domain.HTTPRequestInfo{
+			URL:    "http://example.com",
+			Method: "GET",
+		},
+		Status:    domain.TaskStatusActive,
+		CreatedAt: time.Now().UTC(),
+		UpdatedAt: time.Now().UTC(),
+	}
+
+	err := repo.Save(ctx, task)
+	require.NoError(t, err)
+
+	// Run concurrent updates
+	const numGoroutines = 10
+	done := make(chan error, numGoroutines)
+
+	for i := 0; i < numGoroutines; i++ {
+		go func(iteration int) {
+			// Retrieve the task
+			task, err := repo.FindByID(ctx, taskID)
+			if err != nil {
+				done <- err
+				return
+			}
+			if task == nil {
+				done <- assert.AnError
+				return
+			}
+
+			// Update the task
+			task.Name = task.Name + " - Updated"
+			task.UpdatedAt = time.Now().UTC()
+
+			err = repo.Save(ctx, task)
+			done <- err
+		}(i)
+	}
+
+	// Wait for all goroutines to complete
+	var successCount, errorCount int
+	for i := 0; i < numGoroutines; i++ {
+		err := <-done
+		if err == nil {
+			successCount++
+		} else {
+			errorCount++
+		}
+	}
+
+	// All operations should succeed with pessimistic locking
+	assert.Equal(t, numGoroutines, successCount, "all concurrent updates should succeed with pessimistic locking")
+	assert.Equal(t, 0, errorCount, "no errors should occur with pessimistic locking")
+
+	// Verify final state
+	finalTask, err := repo.FindByID(ctx, taskID)
+	require.NoError(t, err)
+	require.NotNil(t, finalTask)
+
+	// Due to concurrent updates, we just verify the task exists and was updated
+	assert.Contains(t, finalTask.Name, "Concurrent Test Task")
+	assert.Contains(t, finalTask.Name, "Updated")
+}

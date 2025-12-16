@@ -36,14 +36,14 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 		_ = tx.Rollback() // Rollback is safe to call even after Commit
 	}()
 
-	// Use SELECT ... FOR UPDATE to acquire pessimistic lock
-	var exists bool
-	err = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM tasks WHERE id = $1 FOR UPDATE)", dto.ID).Scan(&exists)
-	if err != nil {
+	// Use SELECT ... FOR UPDATE to acquire pessimistic lock on the row
+	var lockedID sql.NullString
+	err = tx.QueryRowContext(ctx, "SELECT id FROM tasks WHERE id = $1 FOR UPDATE", dto.ID).Scan(&lockedID)
+	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("failed to lock task: %w", err)
 	}
 
-	if exists {
+	if lockedID.Valid {
 		// Update existing task
 		query := `
 			UPDATE tasks
@@ -83,7 +83,7 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 		if errors.As(err, &pqErr) {
 			// Check for unique violation or other constraint violations
 			if pqErr.Code == "23505" { // unique_violation
-				return domain.ErrConflict
+				return domain.ErrConstraintViolation
 			}
 		}
 		return fmt.Errorf("failed to save task: %w", err)

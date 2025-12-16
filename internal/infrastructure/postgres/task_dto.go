@@ -70,9 +70,13 @@ func (dto *TaskDTO) ToDomain() (*domain.Task, error) {
 	}
 
 	// Decode base64 body
-	body, err := base64.StdEncoding.DecodeString(payload.Body)
-	if err != nil {
-		return nil, err
+	var body []byte
+	if payload.Body != "" {
+		var err error
+		body, err = base64.StdEncoding.DecodeString(payload.Body)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	task := &domain.Task{
