@@ -60,13 +60,8 @@ func (s *Scheduler) CheckAndEnqueue(ctx context.Context, now time.Time) error {
 		}
 
 		task.LastCheckedAt = now
-		task.Version++
 		if err := s.taskRepo.Save(ctx, task); err != nil {
-			if err == domain.ErrConflict {
-				log.Printf("conflict updating task %s, skipping", task.ID)
-			} else {
-				log.Printf("failed to update last checked time for task %s: %v", task.ID, err)
-			}
+			log.Printf("failed to update last checked time for task %s: %v", task.ID, err)
 		}
 	nextTask:
 	}

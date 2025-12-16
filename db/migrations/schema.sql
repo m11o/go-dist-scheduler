@@ -14,8 +14,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_checked_at TIMESTAMP NULL,
-    version INTEGER NOT NULL DEFAULT 0
+    last_checked_at TIMESTAMP NULL
 );
 
 -- Index for querying active tasks
