@@ -143,7 +143,11 @@ func (r *TaskRepository) FindAllActive(ctx context.Context) ([]*domain.Task, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to query active tasks: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		if closeErr := rows.Close(); closeErr != nil {
+			err = fmt.Errorf("failed to close rows: %w", closeErr)
+		}
+	}()
 
 	var tasks []*domain.Task
 	for rows.Next() {
