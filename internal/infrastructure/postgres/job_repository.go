@@ -108,21 +108,12 @@ func (r *JobRepository) UpdateStatus(ctx context.Context, jobID string, status d
 		_ = tx.Rollback() // Rollback is safe to call even after Commit
 	}()
 
-	// Lock the job row
-	var lockedID sql.NullString
-	err = tx.QueryRowContext(ctx, "SELECT id FROM jobs WHERE id = $1 FOR UPDATE", jobID).Scan(&lockedID)
-	if errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("job not found: %s", jobID)
-	}
-	if err != nil {
-		return fmt.Errorf("failed to lock job: %w", err)
-	}
-
-	// Retrieve current job data
+	// Retrieve current job data with pessimistic locking
 	query := `
 		SELECT id, task_id, scheduled_at, started_at, finished_at, status, retry_count, created_at, updated_at
 		FROM jobs
 		WHERE id = $1
+		FOR UPDATE
 	`
 	var dto JobDTO
 	err = tx.QueryRowContext(ctx, query, jobID).Scan(
@@ -136,6 +127,9 @@ func (r *JobRepository) UpdateStatus(ctx context.Context, jobID string, status d
 		&dto.CreatedAt,
 		&dto.UpdatedAt,
 	)
+	if errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("job not found: %s", jobID)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to retrieve job: %w", err)
 	}

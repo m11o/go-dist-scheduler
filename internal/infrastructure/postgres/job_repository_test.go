@@ -324,9 +324,11 @@ func TestJobRepository_ConcurrentDequeue(t *testing.T) {
 		seenIDs[job.ID] = true
 	}
 
-	// Clean up
+	// Clean up - Delete all test jobs in a single batch operation
 	for _, id := range jobIDs {
-		_, _ = db.ExecContext(ctx, "DELETE FROM jobs WHERE id = $1", id)
+		if _, err := db.ExecContext(ctx, "DELETE FROM jobs WHERE id = $1", id); err != nil {
+			t.Logf("warning: failed to clean up job %s: %v", id, err)
+		}
 	}
 }
 
