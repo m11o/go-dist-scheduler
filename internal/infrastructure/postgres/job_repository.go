@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/yourname/go-dist-scheduler/internal/domain"
 )
@@ -150,7 +151,7 @@ func (r *JobRepository) UpdateStatus(ctx context.Context, jobID string, status d
 		job.MarkAsFailed()
 	default:
 		job.Status = status
-		job.UpdatedAt = job.UpdatedAt
+		job.UpdatedAt = time.Now()
 	}
 
 	// Convert back to DTO
